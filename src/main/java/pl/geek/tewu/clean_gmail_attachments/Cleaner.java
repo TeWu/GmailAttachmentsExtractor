@@ -6,7 +6,6 @@ import com.google.api.services.gmail.model.Label;
 import com.google.api.services.gmail.model.ListLabelsResponse;
 import com.google.api.services.gmail.model.Message;
 import com.google.api.services.gmail.model.ModifyMessageRequest;
-import com.sun.xml.internal.ws.wsdl.writer.document.soap.Body;
 
 import javax.mail.BodyPart;
 import javax.mail.MessagingException;
@@ -22,6 +21,8 @@ import java.util.*;
 
 
 public class Cleaner {
+    public static final String DELETED_FILE_PREFIX = "Deleted ";
+
     private Gmail gmail;
     private Gmail.Users.Labels gmailLabels;
     private Gmail.Users.Messages gmailMessages;
@@ -48,9 +49,10 @@ public class Cleaner {
         }
         System.out.println("Query matched " + msgs.size() + " messages");
 
-        //for (Message msgIds : Collections.singletonList(msgs.get(0))) {  // TODO: <-- process all messages, not only first one
+//        for (Message msgIds : Collections.singletonList(msgs.get(0))) {  // TODO: <-- process all messages, not only first one
         for (Message msgIds : msgs) {
             System.out.println(msgIds);
+            // TODO: Check if msg has attachments that require re-uploading before downloading raw message (with all attachments)
             Message rawMsg = getRawMessage(msgIds.getId());
             MimeMessage mimeMsg = rawMessageToMimeMessage(rawMsg);
 //          System.out.println(new String(com.google.api.client.repackaged.org.apache.commons.codec.binary.Base64.decodeBase64(rawMsg.getRaw())));
@@ -63,18 +65,21 @@ public class Cleaner {
                 if (fileName != null && !fileName.isEmpty())
                     attachmentPartIndexes.add(i);
             }
-
             for (int idx : attachmentPartIndexes) {
                 BodyPart bodyPart = bodyParts[idx];
                 String fileName = bodyPart.getFileName();
-                System.out.println(bodyPart.getFileName() + "   " + (bodyPart.getSize()));
+
                 saveToFile(bodyPart, fileName);
+
+                bodyPart.setFileName(DELETED_FILE_PREFIX + fileName + ".txt");
+                bodyPart.setText("zażółć gęślą jaźń test");
             }
+            if (!attachmentPartIndexes.isEmpty()) // TODO
+                setParts(mimeMsg, bodyParts);
 
-            setParts(mimeMsg, bodyParts);
 
-
-            if (false) { // TODO
+            // TODO
+            if (!attachmentPartIndexes.isEmpty()) {
                 // Build message based on mimeMsg and rawMsg and insert it to Gmail
                 Message msg = mimeMessageToMessage(mimeMsg);
                 List<String> labelIds = rawMsg.getLabelIds();
@@ -114,9 +119,9 @@ public class Cleaner {
         if (content instanceof Multipart) {
             Multipart oldMultipart = (Multipart) content;
             String contentType = oldMultipart.getContentType();
-            String subType = contentType.substring(contentType.indexOf("/"));
-            Multipart newMultipart = new MimeMultipart(subType, bodyParts);
-            mimeMessage.setContent(newMultipart);
+            String subType = contentType.substring(contentType.indexOf("/") + 1, contentType.indexOf(";"));
+            mimeMessage.setContent(new MimeMultipart(subType, bodyParts));
+            mimeMessage.saveChanges();
         } else throw new IllegalStateException("mimeMessage should have Multipart content");
     }
 
