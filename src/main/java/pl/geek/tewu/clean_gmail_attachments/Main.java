@@ -6,6 +6,7 @@ import com.google.api.services.gmail.GmailScopes;
 import javax.mail.MessagingException;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.text.ParseException;
 import java.util.Collections;
 import java.util.List;
 
@@ -16,7 +17,7 @@ public class Main {
     public static final List<String> SCOPES = Collections.singletonList(GmailScopes.MAIL_GOOGLE_COM);
 
 
-    public static void main(String[] args) throws IOException, GeneralSecurityException, MessagingException {
+    public static void main(String[] args) throws IOException, GeneralSecurityException, MessagingException, ParseException {
         Gmail gmail = GmailInit.getGmail(APP_NAME, CREDENTIALS_FILE_PATH, SCOPES);
         new Cleaner(gmail, "me").clean("label:abc", "cleanup");
     }

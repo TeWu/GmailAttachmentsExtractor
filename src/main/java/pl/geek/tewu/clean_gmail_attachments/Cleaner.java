@@ -6,17 +6,23 @@ import com.google.api.services.gmail.model.Label;
 import com.google.api.services.gmail.model.ListLabelsResponse;
 import com.google.api.services.gmail.model.Message;
 import com.google.api.services.gmail.model.ModifyMessageRequest;
+import org.apache.commons.codec.digest.DigestUtils;
 
 import javax.mail.BodyPart;
 import javax.mail.MessagingException;
 import javax.mail.Multipart;
 import javax.mail.Session;
+import javax.mail.internet.MailDateFormat;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.text.ParseException;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 
@@ -37,7 +43,7 @@ public class Cleaner {
         this.gmailMessages = gmail.users().messages();
     }
 
-    public boolean clean(String queryString, String outLabelNamePrefix) throws IOException, MessagingException {
+    public boolean clean(String queryString, String outLabelNamePrefix) throws IOException, MessagingException, ParseException {
         buildLabelsByName();
         Label outLabelWithAttachments = getOrCreateLabel(outLabelNamePrefix + " [with attachments]");
         Label outLabelNoAttachments = getOrCreateLabel(outLabelNamePrefix + " [no attachments]");
@@ -58,6 +64,7 @@ public class Cleaner {
 //          System.out.println(new String(com.google.api.client.repackaged.org.apache.commons.codec.binary.Base64.decodeBase64(rawMsg.getRaw())));
 
 
+            Date receiveDate = new MailDateFormat().parse(mimeMsg.getHeader("Date", null));
             BodyPart[] parts = getParts(mimeMsg);
             List<Integer> attachmentPartIndexes = new ArrayList<>();
             for (int i = 0; i < parts.length; i++) {
@@ -69,17 +76,18 @@ public class Cleaner {
                 BodyPart part = parts[idx];
                 String fileName = part.getFileName();
 
-                saveToFile(part, fileName);
+                // TODO // saveToFile(part, fileName);
 
+                String descriptor = buildDescriptorString(part, receiveDate);  // buildDescriptorString must be called BEFORE modifying the part
                 part.setFileName(DELETED_FILE_PREFIX + fileName + ".txt");
-                part.setText("zażółć gęślą jaźń test");
+                part.setText(descriptor);
             }
             if (!attachmentPartIndexes.isEmpty()) // TODO
                 setParts(mimeMsg, parts);
 
 
             // TODO
-            if (!attachmentPartIndexes.isEmpty()) {
+            if (false && !attachmentPartIndexes.isEmpty()) {
                 // Build message based on mimeMsg and rawMsg and insert it to Gmail
                 Message msg = mimeMessageToMessage(mimeMsg);
                 List<String> labelIds = rawMsg.getLabelIds();
@@ -97,10 +105,22 @@ public class Cleaner {
         return true;
     }
 
+    private String buildDescriptorString(BodyPart part, Date receiveDate) throws IOException, MessagingException {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm:ss O").withZone(ZoneId.systemDefault());
+        return "File has been deleted from email on " + formatter.format(ZonedDateTime.now()) + "\r\n" +
+                "Email received on " + formatter.format(receiveDate.toInstant()) + "\r\n" +
+                "== File info ==\r\n" +
+                "Name: " + part.getFileName() + "\r\n" +
+                "Size: " + part.getSize() + " bytes\r\n" +
+                "SHA1: " + DigestUtils.sha1Hex(part.getInputStream()) + "\r\n" +
+                "MD5: " + DigestUtils.md5Hex(part.getInputStream()) + "\r\n";
+    }
+
 
     private void saveToFile(BodyPart part, String filePath) throws IOException, MessagingException {
         IOUtils.copyInputStreamToFile(part.getInputStream(), new File(filePath));
     }
+
 
     private BodyPart[] getParts(MimeMessage mimeMessage) throws IOException, MessagingException {
         Object content = mimeMessage.getContent();
