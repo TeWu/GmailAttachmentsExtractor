@@ -58,24 +58,24 @@ public class Cleaner {
 //          System.out.println(new String(com.google.api.client.repackaged.org.apache.commons.codec.binary.Base64.decodeBase64(rawMsg.getRaw())));
 
 
-            BodyPart[] bodyParts = getParts(mimeMsg);
+            BodyPart[] parts = getParts(mimeMsg);
             List<Integer> attachmentPartIndexes = new ArrayList<>();
-            for (int i = 0; i < bodyParts.length; i++) {
-                String fileName = bodyParts[i].getFileName();
+            for (int i = 0; i < parts.length; i++) {
+                String fileName = parts[i].getFileName();
                 if (fileName != null && !fileName.isEmpty())
                     attachmentPartIndexes.add(i);
             }
             for (int idx : attachmentPartIndexes) {
-                BodyPart bodyPart = bodyParts[idx];
-                String fileName = bodyPart.getFileName();
+                BodyPart part = parts[idx];
+                String fileName = part.getFileName();
 
-                saveToFile(bodyPart, fileName);
+                saveToFile(part, fileName);
 
-                bodyPart.setFileName(DELETED_FILE_PREFIX + fileName + ".txt");
-                bodyPart.setText("zażółć gęślą jaźń test");
+                part.setFileName(DELETED_FILE_PREFIX + fileName + ".txt");
+                part.setText("zażółć gęślą jaźń test");
             }
             if (!attachmentPartIndexes.isEmpty()) // TODO
-                setParts(mimeMsg, bodyParts);
+                setParts(mimeMsg, parts);
 
 
             // TODO
@@ -98,8 +98,8 @@ public class Cleaner {
     }
 
 
-    private void saveToFile(BodyPart bodyPart, String filePath) throws IOException, MessagingException {
-        IOUtils.copyInputStreamToFile(bodyPart.getInputStream(), new File(filePath));
+    private void saveToFile(BodyPart part, String filePath) throws IOException, MessagingException {
+        IOUtils.copyInputStreamToFile(part.getInputStream(), new File(filePath));
     }
 
     private BodyPart[] getParts(MimeMessage mimeMessage) throws IOException, MessagingException {
@@ -114,13 +114,13 @@ public class Cleaner {
         return new BodyPart[0];
     }
 
-    private void setParts(MimeMessage mimeMessage, BodyPart... bodyParts) throws IOException, MessagingException {
+    private void setParts(MimeMessage mimeMessage, BodyPart... parts) throws IOException, MessagingException {
         Object content = mimeMessage.getContent();
         if (content instanceof Multipart) {
             Multipart oldMultipart = (Multipart) content;
             String contentType = oldMultipart.getContentType();
             String subType = contentType.substring(contentType.indexOf("/") + 1, contentType.indexOf(";"));
-            mimeMessage.setContent(new MimeMultipart(subType, bodyParts));
+            mimeMessage.setContent(new MimeMultipart(subType, parts));
             mimeMessage.saveChanges();
         } else throw new IllegalStateException("mimeMessage should have Multipart content");
     }
