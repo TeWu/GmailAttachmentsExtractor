@@ -17,9 +17,10 @@ import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.text.ParseException;
+import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -34,13 +35,17 @@ public class Cleaner {
     private Gmail.Users.Messages gmailMessages;
     private String userId;
     private Map<String, Label> labelsByName;
+    private Path rootOutput;
+    private int globalUniqueNum;
 
 
-    public Cleaner(Gmail gmail, String userId) {
+    public Cleaner(Gmail gmail, String userId, Path rootOutput) {
         this.gmail = gmail;
         this.userId = userId;
         this.gmailLabels = gmail.users().labels();
         this.gmailMessages = gmail.users().messages();
+        this.rootOutput = rootOutput.toAbsolutePath();
+        this.globalUniqueNum = 0;
     }
 
     public boolean clean(String queryString, String outLabelNamePrefix) throws IOException, MessagingException, ParseException {
@@ -64,9 +69,10 @@ public class Cleaner {
 //          System.out.println(new String(com.google.api.client.repackaged.org.apache.commons.codec.binary.Base64.decodeBase64(rawMsg.getRaw())));
 
 
-            Date receiveDate = new MailDateFormat().parse(mimeMsg.getHeader("Date", null));
+            Instant receiveDate = new MailDateFormat().parse(mimeMsg.getHeader("Date", null)).toInstant();
             BodyPart[] parts = getParts(mimeMsg);
             List<Integer> attachmentPartIndexes = new ArrayList<>();
+            Path attachmentsDir = createDirForAttachments(receiveDate, mimeMsg.getSubject());
             for (int i = 0; i < parts.length; i++) {
                 String fileName = parts[i].getFileName();
                 if (fileName != null && !fileName.isEmpty())
@@ -76,7 +82,7 @@ public class Cleaner {
                 BodyPart part = parts[idx];
                 String fileName = part.getFileName();
 
-                // TODO // saveToFile(part, fileName);
+                saveToFile(part, attachmentsDir.resolve(fileName));
 
                 String descriptor = buildDescriptorString(part, receiveDate);  // buildDescriptorString must be called BEFORE modifying the part
                 part.setFileName(DELETED_FILE_PREFIX + fileName + ".txt");
@@ -105,10 +111,29 @@ public class Cleaner {
         return true;
     }
 
-    private String buildDescriptorString(BodyPart part, Date receiveDate) throws IOException, MessagingException {
+    private Path createDirForAttachments(Instant receiveDate, String messageSubject) {
+        final String receiveDateStr = DateTimeFormatter.ofPattern("yyyy.MM.dd HH_mm_ss").withZone(ZoneId.systemDefault())
+                .format(receiveDate);
+        final String dirName = receiveDateStr + " " + Utils.sanitizeDirname(messageSubject);
+        Path outDir = rootOutput.resolve(dirName);
+        int i = 0;
+
+        // Find unique name for attachments directory
+        while (outDir.toFile().exists() && i < 10)
+            outDir = outDir.resolveSibling(dirName + " " + i++);
+        if (outDir.toFile().exists()) outDir = outDir.resolveSibling(receiveDateStr);
+        if (outDir.toFile().exists()) outDir = outDir.resolveSibling(receiveDateStr + " " + globalUniqueNum++);
+        if (outDir.toFile().exists()) throw new RuntimeException("Can't find unique name for attachments directory");
+
+        // Create attachments directory
+        if (!outDir.toFile().mkdir()) throw new RuntimeException("Can't create attachments directory '" + outDir + "'");
+        return outDir;
+    }
+
+    private String buildDescriptorString(BodyPart part, Instant receiveDate) throws IOException, MessagingException {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm:ss O").withZone(ZoneId.systemDefault());
         return "File has been deleted from email on " + formatter.format(ZonedDateTime.now()) + "\r\n" +
-                "Email received on " + formatter.format(receiveDate.toInstant()) + "\r\n" +
+                "Email received on " + formatter.format(receiveDate) + "\r\n" +
                 "== File info ==\r\n" +
                 "Name: " + part.getFileName() + "\r\n" +
                 "Size: " + part.getSize() + " bytes\r\n" +
@@ -117,8 +142,8 @@ public class Cleaner {
     }
 
 
-    private void saveToFile(BodyPart part, String filePath) throws IOException, MessagingException {
-        IOUtils.copyInputStreamToFile(part.getInputStream(), new File(filePath));
+    private void saveToFile(BodyPart part, Path filePath) throws IOException, MessagingException {
+        Utils.copyInputStreamToFile(part.getInputStream(), filePath.toFile());
     }
 
 
