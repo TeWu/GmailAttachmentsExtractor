@@ -19,14 +19,14 @@ public class Main {
 
 
     public static void main(String[] args) throws IOException, GeneralSecurityException, MessagingException, ParseException {
-        File rootOutput = new File("ATTACHMENTS OUT");
-        if (rootOutput.exists())
-            throw new CleanerException("Output directory '" + rootOutput.getAbsolutePath() + "' already exists - move it or provide different output directory path");
-        if (!rootOutput.mkdirs())
-            throw new CleanerException("Can't create output directory '" + rootOutput.getAbsolutePath() + "'");
-
-        Gmail gmail = GmailInit.getGmail(APP_NAME, CREDENTIALS_FILE_PATH, SCOPES);
         try {
+            File rootOutput = new File("Exported Gmail Attachments");
+            if (rootOutput.exists())
+                throw new CleanerException("Output directory '" + rootOutput.getAbsolutePath() + "' already exists - move it or provide different output directory path");
+            if (!rootOutput.mkdirs())
+                throw new CleanerException("Can't create output directory '" + rootOutput.getAbsolutePath() + "'");
+
+            Gmail gmail = GmailInit.getGmail(APP_NAME, CREDENTIALS_FILE_PATH, SCOPES);
             new Cleaner(gmail, "me", rootOutput.toPath()).clean("label:abc", "cleanup");
         } catch (CleanerException exc) {
             System.err.println("ERROR: " + exc.getMessage());

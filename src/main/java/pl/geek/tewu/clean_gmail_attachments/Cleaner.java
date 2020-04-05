@@ -18,6 +18,7 @@ import javax.mail.internet.MimeMultipart;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.ParseException;
 import java.time.Instant;
@@ -81,10 +82,11 @@ public class Cleaner {
             for (int idx : attachmentPartIndexes) {
                 BodyPart part = parts[idx];
                 String fileName = part.getFileName();
+                Path filePath = attachmentsDir.resolve(fileName);
 
-                saveToFile(part, attachmentsDir.resolve(fileName));
+                saveToFile(part, filePath);
 
-                String descriptor = buildDescriptorString(part, receiveDate);  // buildDescriptorString must be called BEFORE modifying the part
+                String descriptor = buildDescriptorString(part, receiveDate, Files.size(filePath));  // buildDescriptorString must be called BEFORE modifying the part
                 part.setFileName(DELETED_FILE_PREFIX + fileName + ".txt");
                 part.setText(descriptor);
             }
@@ -130,13 +132,13 @@ public class Cleaner {
         return outDir;
     }
 
-    private String buildDescriptorString(BodyPart part, Instant receiveDate) throws IOException, MessagingException {
+    private String buildDescriptorString(BodyPart part, Instant receiveDate, long fileSize) throws IOException, MessagingException {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm:ss O").withZone(ZoneId.systemDefault());
         return "File has been deleted from email on " + formatter.format(ZonedDateTime.now()) + "\r\n" +
                 "Email received on " + formatter.format(receiveDate) + "\r\n" +
                 "== File info ==\r\n" +
                 "Name: " + part.getFileName() + "\r\n" +
-                "Size: " + part.getSize() + " bytes\r\n" +
+                "Size: " + fileSize + " bytes\r\n" +
                 "SHA1: " + DigestUtils.sha1Hex(part.getInputStream()) + "\r\n" +
                 "MD5: " + DigestUtils.md5Hex(part.getInputStream()) + "\r\n";
     }
