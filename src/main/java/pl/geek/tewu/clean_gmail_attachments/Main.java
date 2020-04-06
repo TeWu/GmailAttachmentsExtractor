@@ -20,6 +20,7 @@ public class Main {
 
     public static void main(String[] args) throws IOException, GeneralSecurityException, MessagingException, ParseException {
         try {
+            // TODO: remove CleanerException - print to System.out and exit instead
             File rootOutput = new File("Exported Gmail Attachments");
             if (rootOutput.exists())
                 throw new CleanerException("Output directory '" + rootOutput.getAbsolutePath() + "' already exists - move it or provide different output directory path");

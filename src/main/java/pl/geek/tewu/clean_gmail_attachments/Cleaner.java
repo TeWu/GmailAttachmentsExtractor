@@ -26,6 +26,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.regex.Pattern;
 
 
 public class Cleaner {
@@ -38,6 +39,12 @@ public class Cleaner {
     private Map<String, Label> labelsByName;
     private Path rootOutput;
     private int globalUniqueNum;
+
+    Pattern filenamePattern = Pattern.compile(".*"); // TODO
+    String mimetypeSubPattern = ""; //TODO
+    Pattern mimetypePattern = Pattern.compile("^" + mimetypeSubPattern + ".*"); // TODO
+    int sizeMin = 0; // TODO
+    int sizeMax = 0; // TODO
 
 
     public Cleaner(Gmail gmail, String userId, Path rootOutput) {
@@ -61,56 +68,77 @@ public class Cleaner {
         }
         System.out.println("Query matched " + msgs.size() + " messages");
 
-//        for (Message msgIds : Collections.singletonList(msgs.get(0))) {  // TODO: <-- process all messages, not only first one
         for (Message msgIds : msgs) {
             System.out.println(msgIds);
-            // TODO: Check if msg has attachments that require re-uploading before downloading raw message (with all attachments)
+            Message msg = gmailMessages.get(userId, msgIds.getId()).execute();
+            boolean msgContainsAttachmentToExtract = msg.getPayload().getParts().stream()
+                    .anyMatch(part -> {
+                        if (part.getBody() == null)
+                            return false;
+                        return isBodyPartSatisfiesFilter(part.getFilename(), part.getMimeType(), part.getBody().getSize().longValue());
+                    });
+            if (!msgContainsAttachmentToExtract)
+                continue;
+
             Message rawMsg = getRawMessage(msgIds.getId());
             MimeMessage mimeMsg = rawMessageToMimeMessage(rawMsg);
-//          System.out.println(new String(com.google.api.client.repackaged.org.apache.commons.codec.binary.Base64.decodeBase64(rawMsg.getRaw())));
-
-
             Instant receiveDate = new MailDateFormat().parse(mimeMsg.getHeader("Date", null)).toInstant();
-            BodyPart[] parts = getParts(mimeMsg);
-            List<Integer> attachmentPartIndexes = new ArrayList<>();
             Path attachmentsDir = createDirForAttachments(receiveDate, mimeMsg.getSubject());
-            for (int i = 0; i < parts.length; i++) {
-                String fileName = parts[i].getFileName();
-                if (fileName != null && !fileName.isEmpty())
-                    attachmentPartIndexes.add(i);
-            }
-            for (int idx : attachmentPartIndexes) {
-                BodyPart part = parts[idx];
+
+            BodyPart[] parts = getParts(mimeMsg);
+            for (BodyPart part : parts) {
+                // Extract information about body part
                 String fileName = part.getFileName();
+                if (fileName == null || fileName.isEmpty()) // If part doesn't have a filename, then it's not an attachment - skip it (don't extract it)
+                    continue;
                 Path filePath = attachmentsDir.resolve(fileName);
-
+                String mimeType = part.getContentType();
+                // Save part to file
                 saveToFile(part, filePath);
+                // Calculate part/file size
+                long fileSize = Files.size(filePath);
 
-                String descriptor = buildDescriptorString(part, receiveDate, Files.size(filePath));  // buildDescriptorString must be called BEFORE modifying the part
-                part.setFileName(DELETED_FILE_PREFIX + fileName + ".txt");
-                part.setText(descriptor);
+                // Check if part should be extracted
+                if (isBodyPartSatisfiesFilter(fileName, mimeType, fileSize)) {
+                    // If part should be extracted, override its content with descriptor string (effectively deleting it from email message)
+                    String descriptor = buildDescriptorString(part, receiveDate, fileSize);  // buildDescriptorString must be called BEFORE modifying the part
+                    part.setFileName(DELETED_FILE_PREFIX + fileName + ".txt");
+                    part.setText(descriptor);
+                } else {
+                    // If part should not be extracted, delete it from local filesystem
+                    Files.delete(filePath);
+                }
             }
-            if (!attachmentPartIndexes.isEmpty()) // TODO
-                setParts(mimeMsg, parts);
+            setParts(mimeMsg, parts);
 
+            // if (true) continue; // TODO: remove me
 
-            // TODO
-            if (false && !attachmentPartIndexes.isEmpty()) {
-                // Build message based on mimeMsg and rawMsg and insert it to Gmail
-                Message msg = mimeMessageToMessage(mimeMsg);
-                List<String> labelIds = rawMsg.getLabelIds();
-                labelIds.add(outLabelNoAttachments.getId());
-                msg.setLabelIds(labelIds);
-                msg.setThreadId(rawMsg.getThreadId());
-                Message insertedMsg = insertMessage(msg);
-                System.out.println("Inserted: " + insertedMsg);
+            // Build message based on mimeMsg and rawMsg and insert it to Gmail
+            Message newMsg = mimeMessageToMessage(mimeMsg);
+            List<String> labelIds = rawMsg.getLabelIds();
+            labelIds.add(outLabelNoAttachments.getId());
+            newMsg.setLabelIds(labelIds);
+            newMsg.setThreadId(rawMsg.getThreadId());
+            Message insertedMsg = insertMessage(newMsg);
+            System.out.println("Inserted: " + insertedMsg);
+            // TODO: Check if inserted successfully
 
-                // Add label to the original message
-                addLabelToMessage(rawMsg, outLabelWithAttachments);
-            }
+            // Add label to the original message
+            addLabelToMessage(rawMsg, outLabelWithAttachments);
         }
 
         return true;
+    }
+
+
+    private boolean isBodyPartSatisfiesFilter(String filename, String mimeType, Long size) {
+        if (filename == null || filename.isEmpty() ||
+                mimeType == null || mimeType.isEmpty() || mimeType.contains("multipart") ||
+                size == null || size == 0)
+            return false;
+        return filenamePattern.matcher(filename).matches() &&
+                mimetypePattern.matcher(mimeType).matches() &&
+                (sizeMin == 0 || size >= sizeMin) && (sizeMax == 0 || size <= sizeMax);
     }
 
     private Path createDirForAttachments(Instant receiveDate, String messageSubject) {
