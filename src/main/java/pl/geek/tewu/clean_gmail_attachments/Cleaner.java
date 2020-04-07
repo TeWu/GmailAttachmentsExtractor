@@ -2,10 +2,7 @@ package pl.geek.tewu.clean_gmail_attachments;
 
 import com.google.api.client.repackaged.org.apache.commons.codec.binary.Base64;
 import com.google.api.services.gmail.Gmail;
-import com.google.api.services.gmail.model.Label;
-import com.google.api.services.gmail.model.ListLabelsResponse;
-import com.google.api.services.gmail.model.Message;
-import com.google.api.services.gmail.model.ModifyMessageRequest;
+import com.google.api.services.gmail.model.*;
 import org.apache.commons.codec.digest.DigestUtils;
 
 import javax.mail.BodyPart;
@@ -91,13 +88,19 @@ public class Cleaner {
         // Process email messages
         for (Message msgIds : msgs) {
             System.out.println(msgIds);
+            List<Long> attachmentSizes = new LinkedList<>();
             Message msg = gmailMessages.get(userId, msgIds.getId()).execute();
-            boolean msgContainsAttachmentToExtract = msg.getPayload().getParts().stream()
-                    .anyMatch(part -> {
-                        if (part.getBody() == null)
-                            return false;
-                        return isBodyPartSatisfiesFilter(part.getFilename(), part.getMimeType(), part.getBody().getSize().longValue());
-                    });
+
+            boolean msgContainsAttachmentToExtract = false;
+            for (MessagePart part : msg.getPayload().getParts()) {
+                if (part.getBody() == null)
+                    continue;
+                long size = part.getBody().getSize().longValue();
+                if (isBodyPartSatisfiesFilter(part.getFilename(), part.getMimeType(), size)) {
+                    msgContainsAttachmentToExtract = true;
+                    attachmentSizes.add(size);
+                }
+            }
             if (!msgContainsAttachmentToExtract)
                 continue;
 
@@ -122,6 +125,7 @@ public class Cleaner {
                 // Check if part should be extracted
                 if (isBodyPartSatisfiesFilter(fileName, mimeType, fileSize)) {
                     // If part should be extracted, override its content with descriptor string (effectively deleting it from email message)
+                    if (!attachmentSizes.remove(fileSize)) throw new RuntimeException("Incorrect exported file size");
                     String descriptor = buildDescriptorString(part, receiveDate, fileSize);  // buildDescriptorString must be called BEFORE modifying the part
                     part.setFileName(DELETED_FILE_PREFIX + fileName + ".txt");
                     part.setText(descriptor);
@@ -130,6 +134,7 @@ public class Cleaner {
                     Files.delete(filePath);
                 }
             }
+            if (!attachmentSizes.isEmpty()) throw new RuntimeException("One of attachments hasn't been exported properly");
             setParts(mimeMsg, parts);
 
             // if (true) continue; // TODO: remove me
