@@ -57,10 +57,24 @@ public class Cleaner {
     }
 
     public boolean clean(String queryString, String outLabelNamePrefix) throws IOException, MessagingException, ParseException {
-        buildLabelsByName();
-        Label outLabelWithAttachments = getOrCreateLabel(outLabelNamePrefix + " [with attachments]");
-        Label outLabelNoAttachments = getOrCreateLabel(outLabelNamePrefix + " [no attachments]");
+        // Check if main output directory already exists
+        if (rootOutput.toFile().exists()) {
+            System.err.println("Output directory '" + rootOutput + "' already exists - move it or provide different output directory path - Terminating.");
+            return false;
+        }
 
+        // Create output labels
+        buildLabelsByName();
+        String withAttLabelName = outLabelNamePrefix + " [with attachments]";
+        String noAttLabelName = outLabelNamePrefix + " [no attachments]";
+        if (labelsByName.containsKey(withAttLabelName) || labelsByName.containsKey(noAttLabelName)) {
+            System.err.println("Labels '" + withAttLabelName + "' and/or '" + noAttLabelName + "' already exist. Running this program when this labels already exist might lead to confusing results. Please provide different output labels prefix and try again. Note that removing those labels is probably not a good solution, as it may prevent you from distinguishing between emails with attachments and its copies without attachments - Terminating.");
+            return false;
+        }
+        Label withAttLabel = createLabel(withAttLabelName);
+        Label noAttLabel = createLabel(noAttLabelName);
+
+        // Get email messages matching queryString
         List<Message> msgs = gmailMessages.list(userId).setQ(queryString).execute().getMessages();
         if (msgs == null || msgs.isEmpty()) {
             System.out.println("No messages matched query '" + queryString + "' - Terminating.");
@@ -68,6 +82,13 @@ public class Cleaner {
         }
         System.out.println("Query matched " + msgs.size() + " messages");
 
+        // Create main output directory
+        if (!rootOutput.toFile().mkdirs()) {
+            System.err.println("Can't create output directory '" + rootOutput + "' - Terminating.");
+            return false;
+        }
+
+        // Process email messages
         for (Message msgIds : msgs) {
             System.out.println(msgIds);
             Message msg = gmailMessages.get(userId, msgIds.getId()).execute();
@@ -116,7 +137,7 @@ public class Cleaner {
             // Build message based on mimeMsg and rawMsg and insert it to Gmail
             Message newMsg = mimeMessageToMessage(mimeMsg);
             List<String> labelIds = rawMsg.getLabelIds();
-            labelIds.add(outLabelNoAttachments.getId());
+            labelIds.add(noAttLabel.getId());
             newMsg.setLabelIds(labelIds);
             newMsg.setThreadId(rawMsg.getThreadId());
             Message insertedMsg = insertMessage(newMsg);
@@ -124,7 +145,7 @@ public class Cleaner {
             // TODO: Check if inserted successfully
 
             // Add label to the original message
-            addLabelToMessage(rawMsg, outLabelWithAttachments);
+            addLabelToMessage(rawMsg, withAttLabel);
         }
 
         return true;
@@ -146,7 +167,7 @@ public class Cleaner {
                 .format(receiveDate);
         final String dirName = receiveDateStr + " " + Utils.sanitizeDirname(messageSubject);
         Path outDir = rootOutput.resolve(dirName);
-        int i = 0;
+        int i = 2;
 
         // Find unique name for attachments directory
         while (outDir.toFile().exists() && i < 10)
@@ -209,16 +230,14 @@ public class Cleaner {
                 labelsByName.put(label.getName(), label);
     }
 
-    private Label getOrCreateLabel(String name) throws IOException {
-        return labelsByName.containsKey(name) ? labelsByName.get(name) : createLabel(name);
-    }
-
     private Label createLabel(String name) throws IOException {
         Label label = new Label()
                 .setName(name)
                 .setLabelListVisibility("labelShow")
                 .setMessageListVisibility("show");
-        return gmailLabels.create(userId, label).execute();
+        Label created = gmailLabels.create(userId, label).execute();
+        labelsByName.put(name, created);
+        return created;
     }
 
     private void addLabelToMessage(Message message, Label label) throws IOException {

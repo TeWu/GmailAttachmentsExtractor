@@ -4,8 +4,8 @@ import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.GmailScopes;
 
 import javax.mail.MessagingException;
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.text.ParseException;
 import java.util.Collections;
@@ -19,19 +19,11 @@ public class Main {
 
 
     public static void main(String[] args) throws IOException, GeneralSecurityException, MessagingException, ParseException {
-        try {
-            // TODO: remove CleanerException - print to System.out and exit instead
-            File rootOutput = new File("Exported Gmail Attachments");
-            if (rootOutput.exists())
-                throw new CleanerException("Output directory '" + rootOutput.getAbsolutePath() + "' already exists - move it or provide different output directory path");
-            if (!rootOutput.mkdirs())
-                throw new CleanerException("Can't create output directory '" + rootOutput.getAbsolutePath() + "'");
+        String outputLabelPrefix = "cleanup";
+        String queryString = "label:abc";
+        String outputDirectoryPath = "Exported Gmail Attachments";
 
-            Gmail gmail = GmailInit.getGmail(APP_NAME, CREDENTIALS_FILE_PATH, SCOPES);
-            new Cleaner(gmail, "me", rootOutput.toPath()).clean("label:abc", "cleanup");
-        } catch (CleanerException exc) {
-            System.err.println("ERROR: " + exc.getMessage());
-            System.exit(1);
-        }
+        Gmail gmail = GmailInit.getGmail(APP_NAME, CREDENTIALS_FILE_PATH, SCOPES);
+        new Cleaner(gmail, "me", Paths.get(outputDirectoryPath)).clean(queryString, outputLabelPrefix);
     }
 }
