@@ -40,9 +40,9 @@ public class Cleaner {
     private Path rootOutput;
     private int globalUniqueNum;
 
-    Pattern filenamePattern = Pattern.compile(".*"); // TODO
+    Pattern filenamePattern = Pattern.compile(".*", Pattern.DOTALL); // TODO
     String mimetypeSubPattern = ""; //TODO
-    Pattern mimetypePattern = Pattern.compile("^" + mimetypeSubPattern + ".*"); // TODO
+    Pattern mimetypePattern = Pattern.compile("^" + mimetypeSubPattern + ".*", Pattern.DOTALL); // TODO
     int sizeMin = 0; // TODO
     int sizeMax = 0; // TODO
 
