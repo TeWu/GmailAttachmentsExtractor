@@ -6,6 +6,7 @@ import com.google.api.services.gmail.model.Label;
 import com.google.api.services.gmail.model.Message;
 import com.google.api.services.gmail.model.MessagePart;
 import com.google.api.services.gmail.model.ModifyMessageRequest;
+import com.google.common.collect.HashMultiset;
 import org.apache.commons.codec.digest.DigestUtils;
 
 import javax.mail.BodyPart;
@@ -41,29 +42,42 @@ public class GmailAttachmentsExtractor {
     private String userId;
     private Map<String, Label> labelsByName;
     private Map<String, Label> labelsById;
-    private Path rootOutput;
+    private Path outputDir;
     private int globalUniqueNum;
 
-    Pattern filenamePattern = Pattern.compile(".*", Pattern.DOTALL); // TODO
+    // Summary statistics
+    private int msgProcessedCount;
+    private int msgExtractedCount;
+    private int extractedAttCount;
+    private long totalExtractedAttSize;
+    private HashMultiset<String> extractedAttMimeTypes;
+    private HashMultiset<String> filteredAttMimeTypes;
+
+    public static final String DEFAULT_FILENAME_PATTERN = ".*";
+    public static final String DEFAULT_MIME_TYPE_PATTERN = "^.*";
+    Pattern filenamePattern = Pattern.compile(DEFAULT_FILENAME_PATTERN, Pattern.DOTALL); // TODO
     String mimetypeSubPattern = ""; //TODO
-    Pattern mimetypePattern = Pattern.compile("^" + mimetypeSubPattern + ".*", Pattern.DOTALL); // TODO
+    Pattern mimetypePattern = Pattern.compile(mimetypeSubPattern.isEmpty() ? DEFAULT_MIME_TYPE_PATTERN : "^" + mimetypeSubPattern + ".*", Pattern.DOTALL); // TODO
     int sizeMin = 0; // TODO
     int sizeMax = 0; // TODO
 
 
-    public GmailAttachmentsExtractor(Gmail gmail, String userId, Path rootOutput) {
+    public GmailAttachmentsExtractor(Gmail gmail, String userId, Path outputDir) {
         this.gmail = gmail;
         this.userId = userId;
         this.gmailLabels = gmail.users().labels();
         this.gmailMessages = gmail.users().messages();
-        this.rootOutput = rootOutput.toAbsolutePath();
+        this.outputDir = outputDir.toAbsolutePath();
         this.globalUniqueNum = 0;
     }
 
-    public boolean extractAttachments(String queryString, String outLabelNamePrefix) throws IOException, MessagingException, ParseException {
+    public boolean extractAttachments(String queryString, String outLabelsNamePrefix) throws IOException, MessagingException, ParseException {
+        resetStats();
+        printStartMessage(queryString, outLabelsNamePrefix);
+
         // Check if main output directory already exists
-        if (rootOutput.toFile().exists()) {
-            System.err.println("Output directory '" + rootOutput + "' already exists - move it or provide different output directory path - Terminating.");
+        if (outputDir.toFile().exists()) {
+            System.err.println("Output directory '" + outputDir + "' already exists - move it or provide different output directory path - Terminating.");
             return false;
         }
 
@@ -71,12 +85,13 @@ public class GmailAttachmentsExtractor {
         buildLabelDictionaries();
 
         // Create output labels
-        String withAttLabelName = outLabelNamePrefix + WITH_ATTACHMENTS_SUFFIX;
-        String noAttLabelName = outLabelNamePrefix + NO_ATTACHMENTS_SUFFIX;
+        String withAttLabelName = outLabelsNamePrefix + WITH_ATTACHMENTS_SUFFIX;
+        String noAttLabelName = outLabelsNamePrefix + NO_ATTACHMENTS_SUFFIX;
         if (labelsByName.containsKey(withAttLabelName) || labelsByName.containsKey(noAttLabelName)) {
             System.err.println("Labels '" + withAttLabelName + "' and/or '" + noAttLabelName + "' already exist. Running this program when this labels already exist might lead to confusing results. Please provide different output labels prefix and try again. Note that removing those labels is probably not a good solution, as it may prevent you from distinguishing between emails with attachments and its copies without attachments - Terminating.");
             return false;
         }
+        System.out.printf("Creating output labels '%s' and '%s'\n", withAttLabelName, noAttLabelName);
         Label withAttLabel = createLabel(withAttLabelName);
         Label noAttLabel = createLabel(noAttLabelName);
 
@@ -86,32 +101,42 @@ public class GmailAttachmentsExtractor {
             System.out.println("No messages matched query '" + queryString + "' - Terminating.");
             return false;
         }
-        System.out.println("Query '" + queryString + "' matched " + msgs.size() + " messages");
+        System.out.println("Query '" + queryString + "' matched " + msgs.size() + " email messages");
 
         // Create main output directory
-        if (!rootOutput.toFile().mkdirs()) {
-            System.err.println("Can't create output directory '" + rootOutput + "' - Terminating.");
+        if (!outputDir.toFile().mkdirs()) {
+            System.err.println("Can't create output directory '" + outputDir + "' - Terminating.");
             return false;
         }
 
         // Process email messages
         for (Message msgIds : msgs) {
-            System.out.println(msgIds);
+            msgProcessedCount++;
             List<Long> attachmentSizes = new LinkedList<>();
             Message msg = gmailMessages.get(userId, msgIds.getId()).execute();
 
-            boolean msgContainsAttachmentToExtract = false;
+            Optional<String> maybeSubject = msg.getPayload().getHeaders().stream().filter(h -> Objects.equals(h.getName(), "Subject")).map(h -> h.getValue()).findFirst();
+            System.out.println("Processing email with " + (maybeSubject.isPresent() ? "subject '" + maybeSubject.get() + "'" : "id: " + msg.getId()));
+
+            int attachmentToExtractCount = 0;
+            List<String> mimeTypes = new LinkedList<>();
             for (MessagePart part : msg.getPayload().getParts()) {
+                if (part.getFilename() != null && !part.getFilename().isEmpty())  // If part doesn't have a filename, then it's not an attachment
+                    mimeTypes.add(part.getMimeType());
                 if (part.getBody() == null)
                     continue;
                 long size = part.getBody().getSize().longValue();
                 if (isBodyPartSatisfiesFilter(part.getFilename(), part.getMimeType(), size)) {
-                    msgContainsAttachmentToExtract = true;
+                    attachmentToExtractCount++;
                     attachmentSizes.add(size);
                 }
             }
-            if (!msgContainsAttachmentToExtract)
+            if (attachmentToExtractCount == 0) {
+                System.out.println("    Email doesn't contain attachments that satisfy filter - proceeding to the next email");
+                filteredAttMimeTypes.addAll(mimeTypes);
                 continue;
+            }
+            System.out.println("    Extracting " + attachmentToExtractCount + " attachment(s)");
 
             Message rawMsg = getRawMessage(msgIds.getId());
             MimeMessage mimeMsg = rawMessageToMimeMessage(rawMsg);
@@ -125,7 +150,10 @@ public class GmailAttachmentsExtractor {
                 if (fileName == null || fileName.isEmpty()) // If part doesn't have a filename, then it's not an attachment - skip it (don't extract it)
                     continue;
                 Path filePath = attachmentsDir.resolve(fileName);
-                String mimeType = part.getContentType();
+                String contentType = part.getContentType();
+                String mimeType = contentType.indexOf(";") > 0 ?
+                        contentType.substring(0, contentType.indexOf(";")) :
+                        contentType;
                 // Save part to file
                 saveToFile(part, filePath);
                 // Calculate part/file size
@@ -135,18 +163,24 @@ public class GmailAttachmentsExtractor {
                 if (isBodyPartSatisfiesFilter(fileName, mimeType, fileSize)) {
                     // If part should be extracted, override its content with descriptor string (effectively deleting it from email message)
                     if (!attachmentSizes.remove(fileSize)) throw new RuntimeException("Incorrect exported file size");
+                    System.out.println("    Attachment saved: " + outputDir.relativize(filePath));
                     String descriptor = buildDescriptorString(part, receiveDate, fileSize);  // buildDescriptorString must be called BEFORE modifying the part
                     part.setFileName(DELETED_FILE_PREFIX + fileName + ".txt");
                     part.setText(descriptor);
+                    extractedAttCount++;
+                    totalExtractedAttSize += fileSize;
+                    extractedAttMimeTypes.add(mimeType);
                 } else {
                     // If part should not be extracted, delete it from local filesystem
                     Files.delete(filePath);
+                    filteredAttMimeTypes.add(mimeType);
                 }
             }
             if (!attachmentSizes.isEmpty()) throw new RuntimeException("One of attachments hasn't been exported properly");
             setParts(mimeMsg, parts);
 
             // Build message based on mimeMsg and rawMsg and insert it to Gmail
+            System.out.println("    Inserting copy of email without attachments to Gmail");
             Message newMsg = mimeMessageToMessage(mimeMsg);
             List<String> labelIds = rawMsg.getLabelIds().stream()
                     .filter(id -> {
@@ -161,11 +195,23 @@ public class GmailAttachmentsExtractor {
 
             // Add label to the original message
             addLabelToMessage(rawMsg, withAttLabel);
+
+            msgExtractedCount++;
         }
 
+        printSummary();
         return true;
     }
 
+
+    private void resetStats() {
+        msgProcessedCount = 0;
+        msgExtractedCount = 0;
+        extractedAttCount = 0;
+        totalExtractedAttSize = 0;
+        extractedAttMimeTypes = HashMultiset.create();
+        filteredAttMimeTypes = HashMultiset.create();
+    }
 
     private boolean isBodyPartSatisfiesFilter(String filename, String mimeType, Long size) {
         if (filename == null || filename.isEmpty() ||
@@ -181,7 +227,7 @@ public class GmailAttachmentsExtractor {
         final String receiveDateStr = DateTimeFormatter.ofPattern("yyyy.MM.dd HH_mm_ss").withZone(ZoneId.systemDefault())
                 .format(receiveDate);
         final String dirName = receiveDateStr + " " + Utils.sanitizeDirname(messageSubject);
-        Path outDir = rootOutput.resolve(dirName);
+        Path outDir = outputDir.resolve(dirName);
         int i = 2;
 
         // Find unique name for attachments directory
@@ -287,5 +333,40 @@ public class GmailAttachmentsExtractor {
         Message message = new Message();
         message.setRaw(encodedEmail);
         return message;
+    }
+
+    private void printStartMessage(String queryString, String outLabelsNamePrefix) {
+        System.out.println("Starting Gmail Attachment Extractor");
+        System.out.println(
+                "Parameters:\n" +
+                        "    Query string: " + queryString + "\n" +
+                        "    Output labels prefix: " + outLabelsNamePrefix + "\n" +
+                        "    Output directory: " + outputDir
+        );
+
+        StringBuilder sb = new StringBuilder("    Attachment filter:\n");
+        int initLen = sb.length();
+        if (!Objects.equals(filenamePattern.pattern(), DEFAULT_FILENAME_PATTERN)) sb.append("        Filename pattern: " + filenamePattern.pattern());
+        if (!Objects.equals(mimetypePattern.pattern(), DEFAULT_MIME_TYPE_PATTERN)) sb.append("        MIME type pattern: " + mimetypePattern.pattern());
+        List<String> sizeStrs = new LinkedList<>();
+        if (sizeMin > 0) sizeStrs.add("min " + sizeMin + " bytes");
+        if (sizeMax > 0) sizeStrs.add("max " + sizeMax + " bytes");
+        if (!sizeStrs.isEmpty()) sb.append("        File size: " + String.join(", ", sizeStrs));
+        if (sb.length() > initLen)
+            System.out.println(sb.toString());
+    }
+
+    private void printSummary() {
+        System.out.println(
+                "\n=== SUMMARY ===\n" +
+                        "Processed " + msgProcessedCount + " email(s)\n" +
+                        "Extracted attachments from " + msgExtractedCount + " email(s)\n" +
+                        "Extracted " + extractedAttCount + " attachment(s)\n" +
+                        "Total extracted attachments size: " + Utils.humanReadableByteCount(totalExtractedAttSize) + "\n" +
+                        "Extracted attachments types: " + extractedAttMimeTypes
+        );
+        if (!filteredAttMimeTypes.isEmpty())
+            System.out.println("NOT extracted (filtered) attachments types: " + filteredAttMimeTypes);
+        System.out.println();
     }
 }

@@ -1,6 +1,8 @@
 package pl.geek.tewu.gmail_attachments_extractor;
 
 import java.io.*;
+import java.text.CharacterIterator;
+import java.text.StringCharacterIterator;
 
 
 public class Utils {
@@ -28,6 +30,17 @@ public class Utils {
                 end--;
         }
         return str.substring(0, end);
+    }
+
+    public static String humanReadableByteCount(long bytes) {
+        if (-1000 < bytes && bytes < 1000)
+            return bytes + " bytes";
+        CharacterIterator ci = new StringCharacterIterator("kMGTPE");
+        while (bytes <= -1_000_000 || bytes >= 1_000_000) {
+            bytes /= 1000;
+            ci.next();
+        }
+        return String.format("%.2f %cB", bytes / 1000.0, ci.current());
     }
 
     /***** IO Utils *****/
