@@ -1,4 +1,4 @@
-package pl.geek.tewu.clean_gmail_attachments;
+package pl.geek.tewu.gmail_attachments_extractor;
 
 import com.google.api.client.repackaged.org.apache.commons.codec.binary.Base64;
 import com.google.api.services.gmail.Gmail;
@@ -30,7 +30,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 
-public class Cleaner {
+public class GmailAttachmentsExtractor {
     public static final String WITH_ATTACHMENTS_SUFFIX = " [with attachments]";
     public static final String NO_ATTACHMENTS_SUFFIX = " [no attachments]";
     public static final String DELETED_FILE_PREFIX = "Deleted ";
@@ -51,7 +51,7 @@ public class Cleaner {
     int sizeMax = 0; // TODO
 
 
-    public Cleaner(Gmail gmail, String userId, Path rootOutput) {
+    public GmailAttachmentsExtractor(Gmail gmail, String userId, Path rootOutput) {
         this.gmail = gmail;
         this.userId = userId;
         this.gmailLabels = gmail.users().labels();
@@ -60,7 +60,7 @@ public class Cleaner {
         this.globalUniqueNum = 0;
     }
 
-    public boolean clean(String queryString, String outLabelNamePrefix) throws IOException, MessagingException, ParseException {
+    public boolean extractAttachments(String queryString, String outLabelNamePrefix) throws IOException, MessagingException, ParseException {
         // Check if main output directory already exists
         if (rootOutput.toFile().exists()) {
             System.err.println("Output directory '" + rootOutput + "' already exists - move it or provide different output directory path - Terminating.");

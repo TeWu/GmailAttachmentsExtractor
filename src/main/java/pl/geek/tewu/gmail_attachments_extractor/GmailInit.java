@@ -1,4 +1,4 @@
-package pl.geek.tewu.clean_gmail_attachments;
+package pl.geek.tewu.gmail_attachments_extractor;
 
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;

@@ -1,4 +1,4 @@
-package pl.geek.tewu.clean_gmail_attachments;
+package pl.geek.tewu.gmail_attachments_extractor;
 
 import java.io.*;
 

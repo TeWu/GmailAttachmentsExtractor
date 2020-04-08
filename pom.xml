@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>pl.geek.tewu</groupId>
-    <artifactId>CleanGmailAttachments</artifactId>
+    <artifactId>GmailAttachmentsExtractor</artifactId>
     <version>1.0-SNAPSHOT</version>
     <build>
         <plugins>
@@ -26,6 +26,7 @@
 
 
     <dependencies>
+        <!-- Google APIs -->
         <dependency>
             <groupId>com.google.api-client</groupId>
             <artifactId>google-api-client</artifactId>
@@ -42,12 +43,14 @@
             <version>v1-rev83-1.23.0</version>
         </dependency>
 
+        <!-- Java Mail -->
         <dependency>
             <groupId>com.sun.mail</groupId>
             <artifactId>javax.mail</artifactId>
             <version>1.6.2</version>
         </dependency>
 
+        <!-- Apache Commons Codec - for calculating MD5 and SHA1 hashes -->
         <dependency>
             <groupId>commons-codec</groupId>
             <artifactId>commons-codec</artifactId>
