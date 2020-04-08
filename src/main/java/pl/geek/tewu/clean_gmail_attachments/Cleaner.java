@@ -86,7 +86,7 @@ public class Cleaner {
             System.out.println("No messages matched query '" + queryString + "' - Terminating.");
             return false;
         }
-        System.out.println("Query matched " + msgs.size() + " messages");
+        System.out.println("Query '" + queryString + "' matched " + msgs.size() + " messages");
 
         // Create main output directory
         if (!rootOutput.toFile().mkdirs()) {
@@ -157,9 +157,7 @@ public class Cleaner {
             labelIds.add(noAttLabel.getId());
             newMsg.setLabelIds(labelIds);
             newMsg.setThreadId(rawMsg.getThreadId());
-            Message insertedMsg = insertMessage(newMsg);
-            System.out.println("Inserted: " + insertedMsg);
-            // TODO: Check if inserted successfully
+            insertMessage(newMsg);
 
             // Add label to the original message
             addLabelToMessage(rawMsg, withAttLabel);
