@@ -2,7 +2,10 @@ package pl.geek.tewu.clean_gmail_attachments;
 
 import com.google.api.client.repackaged.org.apache.commons.codec.binary.Base64;
 import com.google.api.services.gmail.Gmail;
-import com.google.api.services.gmail.model.*;
+import com.google.api.services.gmail.model.Label;
+import com.google.api.services.gmail.model.Message;
+import com.google.api.services.gmail.model.MessagePart;
+import com.google.api.services.gmail.model.ModifyMessageRequest;
 import org.apache.commons.codec.digest.DigestUtils;
 
 import javax.mail.BodyPart;
@@ -24,9 +27,12 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 
 public class Cleaner {
+    public static final String WITH_ATTACHMENTS_SUFFIX = " [with attachments]";
+    public static final String NO_ATTACHMENTS_SUFFIX = " [no attachments]";
     public static final String DELETED_FILE_PREFIX = "Deleted ";
 
     private Gmail gmail;
@@ -34,6 +40,7 @@ public class Cleaner {
     private Gmail.Users.Messages gmailMessages;
     private String userId;
     private Map<String, Label> labelsByName;
+    private Map<String, Label> labelsById;
     private Path rootOutput;
     private int globalUniqueNum;
 
@@ -60,10 +67,12 @@ public class Cleaner {
             return false;
         }
 
+        // Build label dictionaries
+        buildLabelDictionaries();
+
         // Create output labels
-        buildLabelsByName();
-        String withAttLabelName = outLabelNamePrefix + " [with attachments]";
-        String noAttLabelName = outLabelNamePrefix + " [no attachments]";
+        String withAttLabelName = outLabelNamePrefix + WITH_ATTACHMENTS_SUFFIX;
+        String noAttLabelName = outLabelNamePrefix + NO_ATTACHMENTS_SUFFIX;
         if (labelsByName.containsKey(withAttLabelName) || labelsByName.containsKey(noAttLabelName)) {
             System.err.println("Labels '" + withAttLabelName + "' and/or '" + noAttLabelName + "' already exist. Running this program when this labels already exist might lead to confusing results. Please provide different output labels prefix and try again. Note that removing those labels is probably not a good solution, as it may prevent you from distinguishing between emails with attachments and its copies without attachments - Terminating.");
             return false;
@@ -137,11 +146,14 @@ public class Cleaner {
             if (!attachmentSizes.isEmpty()) throw new RuntimeException("One of attachments hasn't been exported properly");
             setParts(mimeMsg, parts);
 
-            // if (true) continue; // TODO: remove me
-
             // Build message based on mimeMsg and rawMsg and insert it to Gmail
             Message newMsg = mimeMessageToMessage(mimeMsg);
-            List<String> labelIds = rawMsg.getLabelIds();
+            List<String> labelIds = rawMsg.getLabelIds().stream()
+                    .filter(id -> {
+                        String name = labelsById.get(id).getName();
+                        return !name.endsWith(WITH_ATTACHMENTS_SUFFIX) && !name.endsWith(NO_ATTACHMENTS_SUFFIX);
+                    })
+                    .collect(Collectors.toList());
             labelIds.add(noAttLabel.getId());
             newMsg.setLabelIds(labelIds);
             newMsg.setThreadId(rawMsg.getThreadId());
@@ -227,12 +239,14 @@ public class Cleaner {
     }
 
 
-    private void buildLabelsByName() throws IOException {
+    private void buildLabelDictionaries() throws IOException {
         labelsByName = new HashMap<>();
-        ListLabelsResponse labelsResp = gmailLabels.list(userId).execute();
-        if (!labelsResp.isEmpty())
-            for (Label label : labelsResp.getLabels())
-                labelsByName.put(label.getName(), label);
+        labelsById = new HashMap<>();
+        List<Label> labels = gmailLabels.list(userId).execute().getLabels();
+        for (Label label : labels) {
+            labelsByName.put(label.getName(), label);
+            labelsById.put(label.getId(), label);
+        }
     }
 
     private Label createLabel(String name) throws IOException {
@@ -241,7 +255,8 @@ public class Cleaner {
                 .setLabelListVisibility("labelShow")
                 .setMessageListVisibility("show");
         Label created = gmailLabels.create(userId, label).execute();
-        labelsByName.put(name, created);
+        labelsByName.put(created.getName(), created);
+        labelsById.put(created.getId(), created);
         return created;
     }
 
