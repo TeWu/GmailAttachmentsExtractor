@@ -42,7 +42,7 @@ public class GmailAttachmentsExtractor {
     private String userId;
     private Map<String, Label> labelsByName;
     private Map<String, Label> labelsById;
-    private Path outputDir;
+    private Options options;
     private int globalUniqueNum;
 
     // Summary statistics
@@ -62,22 +62,24 @@ public class GmailAttachmentsExtractor {
     int sizeMax = 0; // TODO
 
 
-    public GmailAttachmentsExtractor(Gmail gmail, String userId, Path outputDir) {
+    public GmailAttachmentsExtractor(Gmail gmail, String userId, Options options) {
         this.gmail = gmail;
         this.userId = userId;
         this.gmailLabels = gmail.users().labels();
         this.gmailMessages = gmail.users().messages();
-        this.outputDir = outputDir.toAbsolutePath();
+        this.options = options;
         this.globalUniqueNum = 0;
     }
 
-    public boolean extractAttachments(String queryString, String outLabelsNamePrefix) throws IOException, MessagingException, ParseException {
+    public boolean extractAttachments() throws IOException, MessagingException, ParseException {
         resetStats();
-        printStartMessage(queryString, outLabelsNamePrefix);
+        printStartMessage();
+
+        System.exit(0);
 
         // Check if main output directory already exists
-        if (outputDir.toFile().exists()) {
-            System.err.println("Output directory '" + outputDir + "' already exists - move it or provide different output directory path - Terminating.");
+        if (options.outputDir.toFile().exists()) {
+            System.err.println("Output directory '" + options.outputDir + "' already exists - move it or provide different output directory path - Terminating.");
             return false;
         }
 
@@ -85,8 +87,8 @@ public class GmailAttachmentsExtractor {
         buildLabelDictionaries();
 
         // Create output labels
-        String withAttLabelName = outLabelsNamePrefix + WITH_ATTACHMENTS_SUFFIX;
-        String noAttLabelName = outLabelsNamePrefix + NO_ATTACHMENTS_SUFFIX;
+        String withAttLabelName = options.outputLabelsPrefix + WITH_ATTACHMENTS_SUFFIX;
+        String noAttLabelName = options.outputLabelsPrefix + NO_ATTACHMENTS_SUFFIX;
         if (labelsByName.containsKey(withAttLabelName) || labelsByName.containsKey(noAttLabelName)) {
             System.err.println("Labels '" + withAttLabelName + "' and/or '" + noAttLabelName + "' already exist. Running this program when this labels already exist might lead to confusing results. Please provide different output labels prefix and try again. Note that removing those labels is probably not a good solution, as it may prevent you from distinguishing between emails with attachments and its copies without attachments - Terminating.");
             return false;
@@ -96,16 +98,16 @@ public class GmailAttachmentsExtractor {
         Label noAttLabel = createLabel(noAttLabelName);
 
         // Get email messages matching queryString
-        List<Message> msgs = gmailMessages.list(userId).setQ(queryString).execute().getMessages();
+        List<Message> msgs = gmailMessages.list(userId).setQ(options.queryString).execute().getMessages();
         if (msgs == null || msgs.isEmpty()) {
-            System.out.println("No messages matched query '" + queryString + "' - Terminating.");
+            System.out.println("No messages matched query '" + options.queryString + "' - Terminating.");
             return false;
         }
-        System.out.println("Query '" + queryString + "' matched " + msgs.size() + " email messages");
+        System.out.println("Query '" + options.queryString + "' matched " + msgs.size() + " email messages");
 
         // Create main output directory
-        if (!outputDir.toFile().mkdirs()) {
-            System.err.println("Can't create output directory '" + outputDir + "' - Terminating.");
+        if (!options.outputDir.toFile().mkdirs()) {
+            System.err.println("Can't create output directory '" + options.outputDir + "' - Terminating.");
             return false;
         }
 
@@ -163,7 +165,7 @@ public class GmailAttachmentsExtractor {
                 if (isBodyPartSatisfiesFilter(fileName, mimeType, fileSize)) {
                     // If part should be extracted, override its content with descriptor string (effectively deleting it from email message)
                     if (!attachmentSizes.remove(fileSize)) throw new RuntimeException("Incorrect exported file size");
-                    System.out.println("    Attachment saved: " + outputDir.relativize(filePath));
+                    System.out.println("    Attachment saved: " + options.outputDir.relativize(filePath));
                     String descriptor = buildDescriptorString(part, receiveDate, fileSize);  // buildDescriptorString must be called BEFORE modifying the part
                     part.setFileName(DELETED_FILE_PREFIX + fileName + ".txt");
                     part.setText(descriptor);
@@ -227,19 +229,19 @@ public class GmailAttachmentsExtractor {
         final String receiveDateStr = DateTimeFormatter.ofPattern("yyyy.MM.dd HH_mm_ss").withZone(ZoneId.systemDefault())
                 .format(receiveDate);
         final String dirName = receiveDateStr + " " + Utils.sanitizeDirname(messageSubject);
-        Path outDir = outputDir.resolve(dirName);
+        Path attDir = options.outputDir.resolve(dirName);
         int i = 2;
 
         // Find unique name for attachments directory
-        while (outDir.toFile().exists() && i < 10)
-            outDir = outDir.resolveSibling(dirName + " " + i++);
-        if (outDir.toFile().exists()) outDir = outDir.resolveSibling(receiveDateStr);
-        if (outDir.toFile().exists()) outDir = outDir.resolveSibling(receiveDateStr + " " + globalUniqueNum++);
-        if (outDir.toFile().exists()) throw new RuntimeException("Can't find unique name for attachments directory");
+        while (attDir.toFile().exists() && i < 10)
+            attDir = attDir.resolveSibling(dirName + " " + i++);
+        if (attDir.toFile().exists()) attDir = attDir.resolveSibling(receiveDateStr);
+        if (attDir.toFile().exists()) attDir = attDir.resolveSibling(receiveDateStr + " " + globalUniqueNum++);
+        if (attDir.toFile().exists()) throw new RuntimeException("Can't find unique name for attachments directory");
 
         // Create attachments directory
-        if (!outDir.toFile().mkdir()) throw new RuntimeException("Can't create attachments directory '" + outDir + "'");
-        return outDir;
+        if (!attDir.toFile().mkdir()) throw new RuntimeException("Can't create attachments directory '" + attDir + "'");
+        return attDir;
     }
 
     private String buildDescriptorString(BodyPart part, Instant receiveDate, long fileSize) throws IOException, MessagingException {
@@ -335,13 +337,13 @@ public class GmailAttachmentsExtractor {
         return message;
     }
 
-    private void printStartMessage(String queryString, String outLabelsNamePrefix) {
+    private void printStartMessage() {
         System.out.println("Starting Gmail Attachment Extractor");
         System.out.println(
                 "Parameters:\n" +
-                        "    Query string: " + queryString + "\n" +
-                        "    Output labels prefix: " + outLabelsNamePrefix + "\n" +
-                        "    Output directory: " + outputDir
+                        "    Query string: " + options.queryString + "\n" +
+                        "    Output directory: " + options.outputDir + "\n" +
+                        "    Output labels prefix: " + options.outputLabelsPrefix
         );
 
         StringBuilder sb = new StringBuilder("    Attachment filter:\n");
