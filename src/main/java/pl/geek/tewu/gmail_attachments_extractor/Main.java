@@ -18,7 +18,7 @@ import java.util.concurrent.Callable;
         usageHelpWidth = 120
 )
 public class Main implements Callable<Integer> {
-    public static final List<String> SCOPES = Collections.singletonList(GmailScopes.MAIL_GOOGLE_COM);
+    public static final List<String> SCOPES = Collections.singletonList(GmailScopes.GMAIL_MODIFY);
 
 
     @Mixin
