@@ -18,8 +18,8 @@ import java.util.concurrent.Callable;
         usageHelpWidth = 120
 )
 public class Main implements Callable<Integer> {
-    public static final String CREDENTIALS_FILE_PATH = "/credentials.json";  // Put 'credentials.json' file in 'resources' folder. How to generate this file: https://developers.google.com/gmail/api/quickstart/java#step_1_turn_on_the
     public static final List<String> SCOPES = Collections.singletonList(GmailScopes.MAIL_GOOGLE_COM);
+
 
     @Mixin
     private Options options;
@@ -31,11 +31,10 @@ public class Main implements Callable<Integer> {
 
     @Override
     public Integer call() throws Exception {
-        // Post-process options
-        options.outputDir = options.outputDir.toAbsolutePath();
+        options.process();
 
         // Init Gmail API
-        Gmail gmail = GmailInit.getGmail(AppInfo.NAME, CREDENTIALS_FILE_PATH, SCOPES);
+        Gmail gmail = GmailInit.getGmail(AppInfo.NAME, options.credentialsFilePath, SCOPES, options.tokensDirectoryPath);
         // Extract attachments
         boolean success = new GmailAttachmentsExtractor(gmail, "me", options).extractAttachments();
         return success ? 0 : 1;

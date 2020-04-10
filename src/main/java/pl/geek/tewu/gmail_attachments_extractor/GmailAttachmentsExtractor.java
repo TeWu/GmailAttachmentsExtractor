@@ -27,8 +27,10 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import static pl.geek.tewu.gmail_attachments_extractor.Options.DEFAULT_FILENAME_REGEX_STR;
+import static pl.geek.tewu.gmail_attachments_extractor.Options.DEFAULT_MIME_TYPE_REGEX_STR;
 
 
 public class GmailAttachmentsExtractor {
@@ -53,14 +55,6 @@ public class GmailAttachmentsExtractor {
     private HashMultiset<String> extractedAttMimeTypes;
     private HashMultiset<String> filteredAttMimeTypes;
 
-    public static final String DEFAULT_FILENAME_PATTERN = ".*";
-    public static final String DEFAULT_MIME_TYPE_PATTERN = "^.*";
-    Pattern filenamePattern = Pattern.compile(DEFAULT_FILENAME_PATTERN, Pattern.DOTALL); // TODO
-    String mimetypeSubPattern = ""; //TODO
-    Pattern mimetypePattern = Pattern.compile(mimetypeSubPattern.isEmpty() ? DEFAULT_MIME_TYPE_PATTERN : "^" + mimetypeSubPattern + ".*", Pattern.DOTALL); // TODO
-    int sizeMin = 0; // TODO
-    int sizeMax = 0; // TODO
-
 
     public GmailAttachmentsExtractor(Gmail gmail, String userId, Options options) {
         this.gmail = gmail;
@@ -74,8 +68,6 @@ public class GmailAttachmentsExtractor {
     public boolean extractAttachments() throws IOException, MessagingException, ParseException {
         resetStats();
         printStartMessage();
-
-        System.exit(0);
 
         // Check if main output directory already exists
         if (options.outputDir.toFile().exists()) {
@@ -175,6 +167,7 @@ public class GmailAttachmentsExtractor {
                 } else {
                     // If part should not be extracted, delete it from local filesystem
                     Files.delete(filePath);
+                    System.out.println("    Attachment NOT saved: " + options.outputDir.relativize(filePath));
                     filteredAttMimeTypes.add(mimeType);
                 }
             }
@@ -220,9 +213,10 @@ public class GmailAttachmentsExtractor {
                 mimeType == null || mimeType.isEmpty() || mimeType.contains("multipart") ||
                 size == null || size == 0)
             return false;
-        return filenamePattern.matcher(filename).matches() &&
-                mimetypePattern.matcher(mimeType).matches() &&
-                (sizeMin == 0 || size >= sizeMin) && (sizeMax == 0 || size <= sizeMax);
+        return options.filter.filenameRegex.matcher(filename).matches() &&
+                options.filter.mimeTypeRegex.matcher(mimeType).matches() &&
+                (options.filter.minSize == 0 || size >= options.filter.minSize) &&
+                (options.filter.maxSize == 0 || size <= options.filter.maxSize);
     }
 
     private Path createDirForAttachments(Instant receiveDate, String messageSubject) {
@@ -348,11 +342,11 @@ public class GmailAttachmentsExtractor {
 
         StringBuilder sb = new StringBuilder("    Attachment filter:\n");
         int initLen = sb.length();
-        if (!Objects.equals(filenamePattern.pattern(), DEFAULT_FILENAME_PATTERN)) sb.append("        Filename pattern: " + filenamePattern.pattern());
-        if (!Objects.equals(mimetypePattern.pattern(), DEFAULT_MIME_TYPE_PATTERN)) sb.append("        MIME type pattern: " + mimetypePattern.pattern());
+        if (!Objects.equals(options.filter.filenameRegex.pattern(), DEFAULT_FILENAME_REGEX_STR)) sb.append("        Filename regex: " + options.filter.filenameRegex.pattern() + "\n");
+        if (!Objects.equals(options.filter.mimeTypeRegex.pattern(), DEFAULT_MIME_TYPE_REGEX_STR)) sb.append("        MIME type regex: " + options.filter.mimeTypeRegex.pattern() + "\n");
         List<String> sizeStrs = new LinkedList<>();
-        if (sizeMin > 0) sizeStrs.add("min " + sizeMin + " bytes");
-        if (sizeMax > 0) sizeStrs.add("max " + sizeMax + " bytes");
+        if (options.filter.minSize > 0) sizeStrs.add("min " + options.filter.minSize + " bytes");
+        if (options.filter.maxSize > 0) sizeStrs.add("max " + options.filter.maxSize + " bytes");
         if (!sizeStrs.isEmpty()) sb.append("        File size: " + String.join(", ", sizeStrs));
         if (sb.length() > initLen)
             System.out.println(sb.toString());

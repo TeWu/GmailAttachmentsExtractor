@@ -33,11 +33,11 @@ public class Utils {
     }
 
     public static String humanReadableByteCount(long bytes) {
-        if (-1000 < bytes && bytes < 1000)
+        if (-1e3 < bytes && bytes < 1e3)
             return bytes + " bytes";
         CharacterIterator ci = new StringCharacterIterator("kMGTPE");
-        while (bytes <= -1_000_000 || bytes >= 1_000_000) {
-            bytes /= 1000;
+        while (bytes <= -1e6 || bytes >= 1e6) {
+            bytes /= 1e3;
             ci.next();
         }
         return String.format("%.2f %cB", bytes / 1000.0, ci.current());
