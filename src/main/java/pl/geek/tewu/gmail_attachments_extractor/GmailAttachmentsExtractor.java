@@ -79,15 +79,19 @@ public class GmailAttachmentsExtractor {
         buildLabelDictionaries();
 
         // Create output labels
-        String withAttLabelName = options.outputLabelsPrefix + WITH_ATTACHMENTS_SUFFIX;
-        String noAttLabelName = options.outputLabelsPrefix + NO_ATTACHMENTS_SUFFIX;
-        if (labelsByName.containsKey(withAttLabelName) || labelsByName.containsKey(noAttLabelName)) {
-            System.err.println("Labels '" + withAttLabelName + "' and/or '" + noAttLabelName + "' already exist. Running this program when this labels already exist might lead to confusing results. Please provide different output labels prefix and try again. Note that removing those labels is probably not a good solution, as it may prevent you from distinguishing between emails with attachments and its copies without attachments - Terminating.");
-            return false;
+        Label withAttLabel = null;
+        Label noAttLabel = null;
+        if (options.modifyGmail) {
+            String withAttLabelName = options.outputLabelsPrefix + WITH_ATTACHMENTS_SUFFIX;
+            String noAttLabelName = options.outputLabelsPrefix + NO_ATTACHMENTS_SUFFIX;
+            if (labelsByName.containsKey(withAttLabelName) || labelsByName.containsKey(noAttLabelName)) {
+                System.err.println("Labels '" + withAttLabelName + "' and/or '" + noAttLabelName + "' already exist. Running this program when this labels already exist might lead to confusing results. Please provide different output labels prefix and try again. Note that removing those labels is probably not a good solution, as it may prevent you from distinguishing between emails with attachments and its copies without attachments - Terminating.");
+                return false;
+            }
+            System.out.printf("Creating output labels '%s' and '%s'\n", withAttLabelName, noAttLabelName);
+            withAttLabel = createLabel(withAttLabelName);
+            noAttLabel = createLabel(noAttLabelName);
         }
-        System.out.printf("Creating output labels '%s' and '%s'\n", withAttLabelName, noAttLabelName);
-        Label withAttLabel = createLabel(withAttLabelName);
-        Label noAttLabel = createLabel(noAttLabelName);
 
         // Get email messages matching queryString
         List<Message> msgs = gmailMessages.list(userId).setQ(options.queryString).execute().getMessages();
@@ -158,9 +162,11 @@ public class GmailAttachmentsExtractor {
                     // If part should be extracted, override its content with descriptor string (effectively deleting it from email message)
                     if (!attachmentSizes.remove(fileSize)) throw new RuntimeException("Incorrect exported file size");
                     System.out.println("    Attachment saved: " + options.outputDir.relativize(filePath));
-                    String descriptor = buildDescriptorString(part, receiveDate, fileSize);  // buildDescriptorString must be called BEFORE modifying the part
-                    part.setFileName(DELETED_FILE_PREFIX + fileName + ".txt");
-                    part.setText(descriptor);
+                    if (options.modifyGmail) {
+                        String descriptor = buildDescriptorString(part, receiveDate, fileSize);  // buildDescriptorString must be called BEFORE modifying the part
+                        part.setFileName(DELETED_FILE_PREFIX + fileName + ".txt");
+                        part.setText(descriptor);
+                    }
                     extractedAttCount++;
                     totalExtractedAttSize += fileSize;
                     extractedAttMimeTypes.add(mimeType);
@@ -174,22 +180,25 @@ public class GmailAttachmentsExtractor {
             if (!attachmentSizes.isEmpty()) throw new RuntimeException("One of attachments hasn't been exported properly");
             setParts(mimeMsg, parts);
 
-            // Build message based on mimeMsg and rawMsg and insert it to Gmail
-            System.out.println("    Inserting copy of email without attachments to Gmail");
-            Message newMsg = mimeMessageToMessage(mimeMsg);
-            List<String> labelIds = rawMsg.getLabelIds().stream()
-                    .filter(id -> {
-                        String name = labelsById.get(id).getName();
-                        return !name.endsWith(WITH_ATTACHMENTS_SUFFIX) && !name.endsWith(NO_ATTACHMENTS_SUFFIX);
-                    })
-                    .collect(Collectors.toList());
-            labelIds.add(noAttLabel.getId());
-            newMsg.setLabelIds(labelIds);
-            newMsg.setThreadId(rawMsg.getThreadId());
-            insertMessage(newMsg);
+            if (options.modifyGmail) {
+                assert withAttLabel != null && noAttLabel != null;
+                // Build message based on mimeMsg and rawMsg and insert it to Gmail
+                System.out.println("    Inserting copy of email without extracted attachments to Gmail");
+                Message newMsg = mimeMessageToMessage(mimeMsg);
+                List<String> labelIds = rawMsg.getLabelIds().stream()
+                        .filter(id -> {
+                            String name = labelsById.get(id).getName();
+                            return !name.endsWith(WITH_ATTACHMENTS_SUFFIX) && !name.endsWith(NO_ATTACHMENTS_SUFFIX);
+                        })
+                        .collect(Collectors.toList());
+                labelIds.add(noAttLabel.getId());
+                newMsg.setLabelIds(labelIds);
+                newMsg.setThreadId(rawMsg.getThreadId());
+                insertMessage(newMsg);
 
-            // Add label to the original message
-            addLabelToMessage(rawMsg, withAttLabel);
+                // Add label to the original message
+                addLabelToMessage(rawMsg, withAttLabel);
+            }
 
             msgExtractedCount++;
         }
@@ -363,6 +372,8 @@ public class GmailAttachmentsExtractor {
         );
         if (!filteredAttMimeTypes.isEmpty())
             System.out.println("NOT extracted (filtered) attachments types: " + filteredAttMimeTypes);
+        if (options.noModifyGmail)
+            System.out.println("GMAIL DATA NOT MODIFIED");
         System.out.println();
     }
 }

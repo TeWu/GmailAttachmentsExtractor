@@ -35,6 +35,12 @@ public class Main implements Callable<Integer> {
 
         // Init Gmail API
         Gmail gmail = GmailInit.getGmail(AppInfo.NAME, options.credentialsFilePath, SCOPES, options.tokensDirectoryPath);
+        // Check authorization and exit if requested
+        if (options.onlyCheckAuth) {
+            gmail.users().labels().list("me");
+            System.out.println("Gmail authorization: OK");
+            System.exit(0);
+        }
         // Extract attachments
         boolean success = new GmailAttachmentsExtractor(gmail, "me", options).extractAttachments();
         return success ? 0 : 1;

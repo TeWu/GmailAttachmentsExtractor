@@ -56,6 +56,19 @@ public class Options {
     )
     public Path tokensDirectoryPath;
 
+    @Option(
+            names = {"--no-modify-gmail"},
+            description = "Only download attachments. Don't modify gmail (don't create labels, don't insert copies of emails without extracted attachments, etc.)."
+    )
+    public boolean noModifyGmail;
+    public boolean modifyGmail;
+
+    @Option(
+            names = {"--only-check-auth"},
+            description = "Only check if authorization information are correct, by trying to access the Gmail account, and exit immediately."
+    )
+    public boolean onlyCheckAuth;
+
 
     @ArgGroup(validate = false, heading = "%nAttachment Filter Options:%n")
     AttachmentFilter filter = new AttachmentFilter();
@@ -101,6 +114,7 @@ public class Options {
 
     public void process() {
         outputDir = outputDir.toAbsolutePath();
+        modifyGmail = !noModifyGmail;
 
         // Attachment Filter Options
         if (!filter.mimeTypeRegexStr.startsWith("^"))
