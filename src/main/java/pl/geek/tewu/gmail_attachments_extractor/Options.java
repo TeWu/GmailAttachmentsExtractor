@@ -65,6 +65,7 @@ public class Options {
 
     @Option(
             names = {"--only-check-auth"},
+            help = true,  // Disable requested option validation
             description = "Only check if authorization information are correct, by trying to access the Gmail account, and exit immediately."
     )
     public boolean onlyCheckAuth;
@@ -113,6 +114,11 @@ public class Options {
 
 
     public void process() {
+        if (!credentialsFilePath.toFile().exists()) {
+            System.err.println("File '" + credentialsFilePath + "' doesn't exist. You need to generate file with Gmail API OAuth2 credentials, to let this program access your Gmail account. How to generate this file: https://developers.google.com/gmail/api/quickstart/java#step_1_turn_on_the . Then either name this file 'credentials.json' and put in current working directory, or provide a path to this file using --credentials-file option.");
+            System.exit(1);
+        }
+
         outputDir = outputDir.toAbsolutePath();
         modifyGmail = !noModifyGmail;
 
