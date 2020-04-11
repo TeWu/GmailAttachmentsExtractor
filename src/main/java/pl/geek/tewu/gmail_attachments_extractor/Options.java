@@ -37,7 +37,7 @@ public class Options {
     public Path outputDir;
 
     @Option(names = {"-l", "--labels-prefix"},
-            defaultValue = "cleanup",
+            defaultValue = "Cleanup",
             paramLabel = "OUTPUT_LABEL_PREFIX", description = "Create labels which name start with this prefix, and mark affected emails with them."
     )
     public String outputLabelsPrefix;
