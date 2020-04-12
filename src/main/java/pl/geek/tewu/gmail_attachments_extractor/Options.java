@@ -19,14 +19,17 @@ import java.util.regex.Pattern;
         separator = " "
 )
 public class Options {
+    public static final Pattern INVALID_CASE_OPERATORS_REGEX = Pattern.compile(".*?\\b(or|and|around)\\b.*", Pattern.DOTALL);
     public static final String DEFAULT_FILENAME_REGEX_STR = ".*";
     public static final String DEFAULT_MIME_TYPE_REGEX_STR = "^.*";
-    public static final Pattern SIZE_STR_PATTERN = Pattern.compile("^([0-9.]+)([kMG]?)B?$");
+    public static final Pattern SIZE_STR_REGEX = Pattern.compile("^([0-9.]+)([kMG]?)B?$");
+    public static final String GMAIL_SEARCH_OPERATORS_HELP_URL = "https://support.google.com/mail/answer/7190";
+    public static final String GMAIL_API_CREDENTIALS_FILE_GENERATION_URL = "https://developers.google.com/gmail/api/quickstart/java#step_1_turn_on_the";
 
 
     @Parameters(
             index = "0", arity = "1",
-            paramLabel = "QUERY_STRING", description = "Only try to extract attachments from emails that match this query. Supports the same query format as the Gmail search box. For example, \"label:big-emails\" or \"from:someuser@example.com has:attachment larger:5M after:2020/12/31 before:2021/01/25\"."
+            paramLabel = "QUERY_STRING", description = "Only try to extract attachments from emails that match this query. Supports the same query format as the Gmail search box. For example, \"label:big-emails\" or \"from:someuser@example.com has:attachment larger:5M after:2020/12/31 before:2021/01/25\". More info about Gmail search operators: " + GMAIL_SEARCH_OPERATORS_HELP_URL
     )
     public String queryString;
 
@@ -46,7 +49,7 @@ public class Options {
     @Option(
             names = {"-C", "--credentials-file"},
             defaultValue = "credentials.json",
-            paramLabel = "CREDENTIALS_FILE", description = "Path to file with Gmail API credentials (typically named credentials.json). How to generate this file: https://developers.google.com/gmail/api/quickstart/java#step_1_turn_on_the"
+            paramLabel = "CREDENTIALS_FILE", description = "Path to file with Gmail API credentials (typically named credentials.json). How to generate this file: " + GMAIL_API_CREDENTIALS_FILE_GENERATION_URL
     )
     public Path credentialsFilePath;
 
@@ -116,7 +119,13 @@ public class Options {
 
     public void process() {
         if (!credentialsFilePath.toFile().exists()) {
-            System.err.println("File '" + credentialsFilePath + "' doesn't exist. You need to generate file with Gmail API OAuth2 credentials, to let this program access your Gmail account. How to generate this file: https://developers.google.com/gmail/api/quickstart/java#step_1_turn_on_the . Then either name this file 'credentials.json' and put in current working directory, or provide a path to this file using --credentials-file option.");
+            System.err.println("File '" + credentialsFilePath + "' doesn't exist. You need to generate file with Gmail API OAuth2 credentials, to let this program access your Gmail account. How to generate this file: " + GMAIL_API_CREDENTIALS_FILE_GENERATION_URL + " . Then either name this file 'credentials.json' and put in current working directory, or provide a path to this file using --credentials-file option.");
+            System.exit(1);
+        }
+
+        Matcher invalidQueryStringMatcher = INVALID_CASE_OPERATORS_REGEX.matcher(queryString);
+        if (invalidQueryStringMatcher.matches()) {
+            System.err.println("Operators in QUERY_STRING, like '" + invalidQueryStringMatcher.group(1) + "', should be upper case. See more info about Gmail search operators: " + GMAIL_SEARCH_OPERATORS_HELP_URL);
             System.exit(1);
         }
 
@@ -135,7 +144,7 @@ public class Options {
     }
 
     private long sizeStrToLong(String str) {
-        Matcher m = SIZE_STR_PATTERN.matcher(str);
+        Matcher m = SIZE_STR_REGEX.matcher(str);
         if (!m.matches())
             throw new ParameterException(spec.commandLine(), "Invalid argument value '" + str + "' (valid suffixes: k, M and G)");
         double value = Double.parseDouble(m.group(1));
