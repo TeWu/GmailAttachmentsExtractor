@@ -341,7 +341,7 @@ public class GmailAttachmentsExtractor {
     }
 
     private void printStartMessage() {
-        System.out.println("Starting Gmail Attachment Extractor");
+        System.out.println("Starting " + AppInfo.NAME);
         System.out.println(
                 "Parameters:\n" +
                         "    Query string: " + options.queryString + "\n" +
