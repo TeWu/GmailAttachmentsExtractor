@@ -44,13 +44,6 @@
             <artifactId>javax.mail</artifactId>
             <version>1.6.2</version>
         </dependency>
-
-        <!-- Apache Commons Codec - for calculating MD5 and SHA1 hashes -->
-        <dependency>
-            <groupId>commons-codec</groupId>
-            <artifactId>commons-codec</artifactId>
-            <version>1.13</version>
-        </dependency>
     </dependencies>
 
     <build>

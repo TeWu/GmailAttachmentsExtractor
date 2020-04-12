@@ -4,6 +4,7 @@ import picocli.CommandLine.*;
 import picocli.CommandLine.Model.CommandSpec;
 
 import java.nio.file.Path;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -123,10 +124,8 @@ public class Options {
         modifyGmail = !noModifyGmail;
 
         // Attachment Filter Options
-        if (!filter.mimeTypeRegexStr.startsWith("^"))
-            filter.mimeTypeRegexStr = "^" + filter.mimeTypeRegexStr;
-        if (!filter.mimeTypeRegexStr.endsWith(".*"))
-            filter.mimeTypeRegexStr = filter.mimeTypeRegexStr + ".*";
+        if (!Objects.equals(filter.mimeTypeRegexStr, DEFAULT_MIME_TYPE_REGEX_STR) && !filter.mimeTypeRegexStr.startsWith("^("))
+            filter.mimeTypeRegexStr = "^(" + filter.mimeTypeRegexStr + ").*";
         filter.mimeTypeRegex = Pattern.compile(filter.mimeTypeRegexStr, Pattern.DOTALL);
         filter.filenameRegex = Pattern.compile(filter.filenameRegexStr, Pattern.DOTALL);
         filter.minSize = sizeStrToLong(filter.minSizeStr);

@@ -7,7 +7,6 @@ import com.google.api.services.gmail.model.Message;
 import com.google.api.services.gmail.model.MessagePart;
 import com.google.api.services.gmail.model.ModifyMessageRequest;
 import com.google.common.collect.HashMultiset;
-import org.apache.commons.codec.digest.DigestUtils;
 
 import javax.mail.BodyPart;
 import javax.mail.MessagingException;
@@ -114,7 +113,8 @@ public class GmailAttachmentsExtractor {
             Message msg = gmailMessages.get(userId, msgIds.getId()).execute();
 
             Optional<String> maybeSubject = msg.getPayload().getHeaders().stream().filter(h -> Objects.equals(h.getName(), "Subject")).map(h -> h.getValue()).findFirst();
-            System.out.println("Processing email with " + (maybeSubject.isPresent() ? "subject '" + maybeSubject.get() + "'" : "id: " + msg.getId()));
+            int percentProgress = 100 * msgProcessedCount / msgs.size();
+            System.out.println(msgProcessedCount + "/" + msgs.size() + " (" + percentProgress + "%) | Processing email with " + (maybeSubject.isPresent() ? "subject '" + maybeSubject.get() + "'" : "id: " + msg.getId()));
 
             int attachmentToExtractCount = 0;
             List<String> mimeTypes = new LinkedList<>();
