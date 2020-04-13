@@ -163,8 +163,8 @@ public class GmailAttachmentsExtractor {
                     if (!attachmentSizes.remove(fileSize)) throw new RuntimeException("Incorrect exported file size");
                     System.out.println("    Attachment saved: " + options.outputDir.relativize(filePath));
                     if (options.modifyGmail) {
-                        String descriptor = buildDescriptorString(part, receiveDate, fileSize);  // buildDescriptorString must be called BEFORE modifying the part
-                        part.setFileName(DELETED_FILE_PREFIX + fileName + ".txt");
+                        String descriptor = buildDescriptorString(part, mimeMsg.getMessageID(), mimeMsg.getSubject(), receiveDate, fileSize);  // buildDescriptorString must be called BEFORE modifying the part
+                        part.setFileName(DELETED_FILE_PREFIX + fileName + ".yml");
                         part.setText(descriptor);
                     }
                     extractedAttCount++;
@@ -247,15 +247,19 @@ public class GmailAttachmentsExtractor {
         return attDir;
     }
 
-    private String buildDescriptorString(BodyPart part, Instant receiveDate, long fileSize) throws IOException, MessagingException {
+    private String buildDescriptorString(BodyPart part, String id, String subject, Instant receiveDate, long fileSize) throws IOException, MessagingException {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm:ss O").withZone(ZoneId.systemDefault());
-        return "File has been deleted from email on " + formatter.format(ZonedDateTime.now()) + "\r\n" +
-                "Email received on " + formatter.format(receiveDate) + "\r\n" +
-                "== File info ==\r\n" +
-                "Name: " + part.getFileName() + "\r\n" +
-                "Size: " + fileSize + " bytes\r\n" +
-                "SHA1: " + DigestUtils.sha1Hex(part.getInputStream()) + "\r\n" +
-                "MD5: " + DigestUtils.md5Hex(part.getInputStream()) + "\r\n";
+        return "message: The attachment has been deleted from this email message.\r\n" +
+                "date_deleted: " + formatter.format(ZonedDateTime.now()) + "\r\n" +
+                "email:\r\n" +
+                "    id: \"" + Utils.addJavaEscapeSequences(id) + "\"\r\n" +
+                "    subject: \"" + Utils.addJavaEscapeSequences(subject) + "\"\r\n" +
+                "    date_received: " + formatter.format(receiveDate) + "\r\n" +
+                "attachment_file:\r\n" +
+                "    name: \"" + Utils.addJavaEscapeSequences(part.getFileName()) + "\"\r\n" +
+                "    size_in_bytes: " + fileSize + "\r\n" +
+                "    sha1: " + DigestUtils.sha1Hex(part.getInputStream()) + "\r\n" +
+                "    md5:  " + DigestUtils.md5Hex(part.getInputStream()) + "\r\n";
     }
 
 

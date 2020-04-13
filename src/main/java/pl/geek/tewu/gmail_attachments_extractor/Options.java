@@ -62,7 +62,7 @@ public class Options {
 
     @Option(
             names = {"--no-modify-gmail"},
-            description = "Only download attachments. Don't modify gmail (don't create labels, don't insert copies of emails without extracted attachments, etc.)."
+            description = "Only download attachments. Don't modify Gmail (don't create labels, don't insert copies of emails without extracted attachments, etc.)."
     )
     public boolean noModifyGmail;
     public boolean modifyGmail;
