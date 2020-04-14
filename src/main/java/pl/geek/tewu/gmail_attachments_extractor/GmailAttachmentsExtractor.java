@@ -137,7 +137,8 @@ public class GmailAttachmentsExtractor {
             System.out.println("    Extracting " + attachmentToExtractCount + " attachment(s)");
 
             Message rawMsg = getRawMessage(msgIds.getId());
-            MimeMessage mimeMsg = rawMessageToMimeMessage(rawMsg);
+            AccessibleMimeMessage mimeMsg = rawMessageToMimeMessage(rawMsg);
+            String messageId = mimeMsg.generateNextMessageID();
             Instant receiveDate = new MailDateFormat().parse(mimeMsg.getHeader("Date", null)).toInstant();
             Path attachmentsDir = createDirForAttachments(receiveDate, mimeMsg.getSubject());
 
@@ -163,7 +164,7 @@ public class GmailAttachmentsExtractor {
                     if (!attachmentSizes.remove(fileSize)) throw new RuntimeException("Incorrect exported file size");
                     System.out.println("    Attachment saved: " + options.outputDir.relativize(filePath));
                     if (options.modifyGmail) {
-                        String descriptor = buildDescriptorString(part, mimeMsg.getMessageID(), mimeMsg.getSubject(), receiveDate, fileSize);  // buildDescriptorString must be called BEFORE modifying the part
+                        String descriptor = buildDescriptorString(part, messageId, mimeMsg.getSubject(), receiveDate, fileSize);  // buildDescriptorString must be called BEFORE modifying the part
                         part.setFileName(DELETED_FILE_PREFIX + fileName + ".yml");
                         part.setText(descriptor);
                     }
@@ -330,9 +331,9 @@ public class GmailAttachmentsExtractor {
                 .execute();
     }
 
-    private MimeMessage rawMessageToMimeMessage(Message message) throws MessagingException {
+    private AccessibleMimeMessage rawMessageToMimeMessage(Message message) throws MessagingException {
         Session session = Session.getDefaultInstance(new Properties(), null);
-        return new MimeMessage(session, new ByteArrayInputStream(Base64.decodeBase64(message.getRaw())));
+        return new AccessibleMimeMessage(session, new ByteArrayInputStream(Base64.decodeBase64(message.getRaw())));
     }
 
     private Message mimeMessageToMessage(MimeMessage mimeMessage) throws MessagingException, IOException {
