@@ -118,15 +118,17 @@ public class GmailAttachmentsExtractor {
 
             int attachmentToExtractCount = 0;
             List<String> mimeTypes = new LinkedList<>();
-            for (MessagePart part : msg.getPayload().getParts()) {
-                if (part.getFilename() != null && !part.getFilename().isEmpty())  // If part doesn't have a filename, then it's not an attachment
-                    mimeTypes.add(part.getMimeType());
-                if (part.getBody() == null)
-                    continue;
-                long size = part.getBody().getSize().longValue();
-                if (isBodyPartSatisfiesFilter(part.getFilename(), part.getMimeType(), size)) {
-                    attachmentToExtractCount++;
-                    attachmentSizes.add(size);
+            if (msg.getPayload().getParts() != null) {  // If msg's MIME type is multipart
+                for (MessagePart part : msg.getPayload().getParts()) {
+                    if (part.getFilename() != null && !part.getFilename().isEmpty())  // If part doesn't have a filename, then it's not an attachment
+                        mimeTypes.add(part.getMimeType());
+                    if (part.getBody() == null)
+                        continue;
+                    long size = part.getBody().getSize().longValue();
+                    if (isBodyPartSatisfiesFilter(part.getFilename(), part.getMimeType(), size)) {
+                        attachmentToExtractCount++;
+                        attachmentSizes.add(size);
+                    }
                 }
             }
             if (attachmentToExtractCount == 0) {
