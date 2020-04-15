@@ -75,6 +75,13 @@ public class GmailAttachmentsExtractor {
             return false;
         }
 
+        // Get email messages matching queryString
+        List<Message> msgs = gmailMessages.list(userId).setQ(options.queryString).execute().getMessages();
+        if (msgs == null || msgs.isEmpty()) {
+            System.out.println("No messages matched query '" + options.queryString + "' - Terminating.");
+            return false;
+        }
+
         // Build label dictionaries
         buildLabelDictionaries();
 
@@ -93,19 +100,7 @@ public class GmailAttachmentsExtractor {
             noAttLabel = createLabel(noAttLabelName);
         }
 
-        // Get email messages matching queryString
-        List<Message> msgs = gmailMessages.list(userId).setQ(options.queryString).execute().getMessages();
-        if (msgs == null || msgs.isEmpty()) {
-            System.out.println("No messages matched query '" + options.queryString + "' - Terminating.");
-            return false;
-        }
         System.out.println("Query '" + options.queryString + "' matched " + msgs.size() + " email messages");
-
-        // Create main output directory
-        if (!options.outputDir.toFile().mkdirs()) {
-            System.err.println("Can't create output directory '" + options.outputDir + "' - Terminating.");
-            return false;
-        }
 
         // Process email messages
         for (Message msgIds : msgs) {
@@ -244,7 +239,7 @@ public class GmailAttachmentsExtractor {
         if (attDir.toFile().exists()) throw new RuntimeException("Can't find unique name for attachments directory");
 
         // Create attachments directory
-        if (!attDir.toFile().mkdir()) throw new RuntimeException("Can't create attachments directory '" + attDir + "'");
+        if (!attDir.toFile().mkdirs()) throw new RuntimeException("Can't create attachments directory '" + attDir + "'");
         return attDir;
     }
 
