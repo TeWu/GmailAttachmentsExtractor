@@ -128,17 +128,18 @@ public class GmailAttachmentsExtractor {
                 }
             }
             if (attachmentToExtractCount == 0) {
-                System.out.println("    Email doesn't contain attachments that satisfy filter - proceeding to the next email");
+                System.out.println("    Email doesn't contain attachments that satisfy the filter - proceeding to the next email");
                 filteredAttMimeTypes.addAll(mimeTypes);
                 continue;
             }
-            System.out.println("    Extracting " + attachmentToExtractCount + " attachment(s)");
 
             Message rawMsg = getRawMessage(msgIds.getId());
             AccessibleMimeMessage mimeMsg = rawMessageToMimeMessage(rawMsg);
             String messageId = mimeMsg.generateNextMessageID();
             Instant receiveDate = new MailDateFormat().parse(mimeMsg.getHeader("Date", null)).toInstant();
             Path attachmentsDir = createDirForAttachments(receiveDate, mimeMsg.getSubject());
+
+            System.out.println("    Extracting " + attachmentToExtractCount + " attachment(s) to directory '" + attachmentsDir.getFileName() + "'");
 
             BodyPart[] parts = getParts(mimeMsg);
             for (BodyPart part : parts) {
@@ -160,7 +161,7 @@ public class GmailAttachmentsExtractor {
                 if (isBodyPartSatisfiesFilter(fileName, mimeType, fileSize)) {
                     // If part should be extracted, override its content with descriptor string (effectively deleting it from email message)
                     if (!attachmentSizes.remove(fileSize)) throw new RuntimeException("Incorrect exported file size");
-                    System.out.println("    Attachment saved: " + options.outputDir.relativize(filePath));
+                    System.out.println("    Attachment saved: " + fileName);
                     if (options.modifyGmail) {
                         String descriptor = buildDescriptorString(part, messageId, mimeMsg.getSubject(), receiveDate, fileSize);  // buildDescriptorString must be called BEFORE modifying the part
                         part.setFileName(DELETED_FILE_PREFIX + fileName + ".yml");
@@ -172,7 +173,7 @@ public class GmailAttachmentsExtractor {
                 } else {
                     // If part should not be extracted, delete it from local filesystem
                     Files.delete(filePath);
-                    System.out.println("    Attachment NOT saved: " + options.outputDir.relativize(filePath));
+                    System.out.println("    Attachment NOT saved: " + fileName);
                     filteredAttMimeTypes.add(mimeType);
                 }
             }
