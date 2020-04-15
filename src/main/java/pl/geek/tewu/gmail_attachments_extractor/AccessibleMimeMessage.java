@@ -6,6 +6,7 @@ import javax.mail.Session;
 import javax.mail.internet.InternetHeaders;
 import javax.mail.internet.MimeMessage;
 import java.io.InputStream;
+import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
@@ -19,6 +20,7 @@ public class AccessibleMimeMessage extends MimeMessage {
      * A global unique number, to ensure uniqueness of generated strings.
      **/
     private static AtomicInteger id = new AtomicInteger();
+    private static Random random = new Random();
     private static final char[] MESSAGE_ID_ALPHABET = new char[]{
             '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
             'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
@@ -80,7 +82,7 @@ public class AccessibleMimeMessage extends MimeMessage {
         // New Message-ID is <(prev-left).(hashcode).(currentTime).(id)@(prev-right)>
         int at = prevMessageId.lastIndexOf('@');
         return prevMessageId.substring(0, at) + "." +
-                convertDecToBase64(session.hashCode()) + "." +
+                convertDecToBase64(random.nextInt() & Integer.MAX_VALUE) + "." +
                 convertDecToBase64(System.currentTimeMillis()) + "." +
                 convertDecToBase64(id.getAndIncrement()) +
                 prevMessageId.substring(at);
