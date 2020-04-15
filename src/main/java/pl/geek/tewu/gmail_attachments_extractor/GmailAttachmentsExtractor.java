@@ -1,5 +1,6 @@
 package pl.geek.tewu.gmail_attachments_extractor;
 
+import com.google.api.client.http.ByteArrayContent;
 import com.google.api.client.repackaged.org.apache.commons.codec.binary.Base64;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.Label;
@@ -187,7 +188,6 @@ public class GmailAttachmentsExtractor {
                 assert withAttLabel != null && noAttLabel != null;
                 // Build message based on mimeMsg and rawMsg and insert it to Gmail
                 System.out.println("    Inserting copy of email without extracted attachments to Gmail");
-                Message newMsg = mimeMessageToMessage(mimeMsg);
                 List<String> labelIds = rawMsg.getLabelIds().stream()
                         .filter(id -> {
                             String name = labelsById.get(id).getName();
@@ -195,9 +195,7 @@ public class GmailAttachmentsExtractor {
                         })
                         .collect(Collectors.toList());
                 labelIds.add(noAttLabel.getId());
-                newMsg.setLabelIds(labelIds);
-                newMsg.setThreadId(rawMsg.getThreadId());
-                insertMessage(newMsg);
+                insertMessage(mimeMsg, labelIds, rawMsg.getThreadId());
 
                 // Add label to the original message
                 addLabelToMessage(rawMsg, withAttLabel);
@@ -321,11 +319,22 @@ public class GmailAttachmentsExtractor {
         gmailMessages.modify(userId, message.getId(), modReq).execute();
     }
 
-    private Message insertMessage(Message message) throws IOException {
-        return gmailMessages.insert(userId, message)
+    private Message insertMessage(MimeMessage mimeMessage, List<String> labelIds, String threadId) throws IOException, MessagingException {
+        // Create Message instance containing email message metadata
+        Message metadata = new Message()
+                .setLabelIds(labelIds)
+                .setThreadId(threadId);
+
+        // Create byte array containing email message data (in RFC 2822 format)
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        mimeMessage.writeTo(baos);
+        ByteArrayContent rawMessageBytes = new ByteArrayContent("message/rfc822", baos.toByteArray());
+
+        return gmailMessages.insert(userId, metadata, rawMessageBytes)
                 .setInternalDateSource("dateHeader")  // The GMail internal message time is based on the Date header in the email, when valid.
                 .execute();
     }
+
 
     private Message getRawMessage(String messageId) throws IOException {
         return gmailMessages.get(userId, messageId)
@@ -336,15 +345,6 @@ public class GmailAttachmentsExtractor {
     private AccessibleMimeMessage rawMessageToMimeMessage(Message message) throws MessagingException {
         Session session = Session.getDefaultInstance(new Properties(), null);
         return new AccessibleMimeMessage(session, new ByteArrayInputStream(Base64.decodeBase64(message.getRaw())));
-    }
-
-    private Message mimeMessageToMessage(MimeMessage mimeMessage) throws MessagingException, IOException {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        mimeMessage.writeTo(baos);
-        String encodedEmail = Base64.encodeBase64URLSafeString(baos.toByteArray());
-        Message message = new Message();
-        message.setRaw(encodedEmail);
-        return message;
     }
 
     private void printStartMessage() {
