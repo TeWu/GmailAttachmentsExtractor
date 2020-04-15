@@ -22,8 +22,7 @@ public class AccessibleMimeMessage extends MimeMessage {
     private static final char[] MESSAGE_ID_ALPHABET = new char[]{
             '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
             'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
-            'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '!', '#', '$', '%', '&', '\'', '*',
-            '+', '-', '/', '=', '?', '^', '_', '`', '{', '|', '}', '~'
+            'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '_', '+'
     };
 
 
@@ -81,14 +80,14 @@ public class AccessibleMimeMessage extends MimeMessage {
         // New Message-ID is <(prev-left).(hashcode).(currentTime).(id)@(prev-right)>
         int at = prevMessageId.lastIndexOf('@');
         return prevMessageId.substring(0, at) + "." +
-                convertDecToBase81(session.hashCode()) + "." +
-                convertDecToBase81(System.currentTimeMillis()) + "." +
-                convertDecToBase81(id.getAndIncrement()) +
+                convertDecToBase64(session.hashCode()) + "." +
+                convertDecToBase64(System.currentTimeMillis()) + "." +
+                convertDecToBase64(id.getAndIncrement()) +
                 prevMessageId.substring(at);
     }
 
 
-    private String convertDecToBase81(long num) {
+    private String convertDecToBase64(long num) {
         if (num == 0) return "0";
         final int base = MESSAGE_ID_ALPHABET.length;
         StringBuilder res = new StringBuilder();
