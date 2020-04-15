@@ -245,17 +245,19 @@ public class GmailAttachmentsExtractor {
 
     private String buildDescriptorString(BodyPart part, String id, String subject, Instant receiveDate, long fileSize) throws IOException, MessagingException {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm:ss O").withZone(ZoneId.systemDefault());
-        return "message: The attachment has been deleted from this email message.\r\n" +
-                "date_deleted: " + formatter.format(ZonedDateTime.now()) + "\r\n" +
-                "email:\r\n" +
-                "    id: \"" + Utils.addJavaEscapeSequences(id) + "\"\r\n" +
-                "    subject: \"" + Utils.addJavaEscapeSequences(subject) + "\"\r\n" +
-                "    date_received: " + formatter.format(receiveDate) + "\r\n" +
-                "attachment_file:\r\n" +
-                "    name: \"" + Utils.addJavaEscapeSequences(part.getFileName()) + "\"\r\n" +
-                "    size_in_bytes: " + fileSize + "\r\n" +
-                "    sha1: " + DigestUtils.sha1Hex(part.getInputStream()) + "\r\n" +
-                "    md5:  " + DigestUtils.md5Hex(part.getInputStream()) + "\r\n";
+        return "#\r\n" +
+                "# The attachment has been deleted from this email message.\r\n" +
+                "#\r\n" +
+                "Date Deleted: " + formatter.format(ZonedDateTime.now()) + "\r\n" +
+                "Email:\r\n" +
+                "    ID: \"" + Utils.addJavaEscapeSequences(id) + "\"\r\n" +
+                "    Subject: \"" + Utils.addJavaEscapeSequences(subject) + "\"\r\n" +
+                "    Date Received: " + formatter.format(receiveDate) + "\r\n" +
+                "Attachment file:\r\n" +
+                "    Name: \"" + Utils.addJavaEscapeSequences(part.getFileName()) + "\"\r\n" +
+                "    Size in bytes: " + fileSize + "\r\n" +
+                "    SHA1: " + DigestUtils.sha1Hex(part.getInputStream()) + "\r\n" +
+                "    MD5:  " + DigestUtils.md5Hex(part.getInputStream()) + "\r\n";
     }
 
 
