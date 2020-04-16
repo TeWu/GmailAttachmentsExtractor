@@ -247,11 +247,11 @@ public class GmailAttachmentsExtractor {
         return "#\r\n" +
                 "# The attachment has been deleted from this email message.\r\n" +
                 "#\r\n" +
-                "Date Deleted: " + formatter.format(ZonedDateTime.now()) + "\r\n" +
+                "Date deleted: " + formatter.format(ZonedDateTime.now()) + "\r\n" +
                 "Email:\r\n" +
                 "    ID: \"" + Utils.addJavaEscapeSequences(id) + "\"\r\n" +
                 "    Subject: \"" + Utils.addJavaEscapeSequences(subject) + "\"\r\n" +
-                "    Date Received: " + formatter.format(receiveDate) + "\r\n" +
+                "    Date received: " + formatter.format(receiveDate) + "\r\n" +
                 "Attachment file:\r\n" +
                 "    Name: \"" + Utils.addJavaEscapeSequences(part.getFileName()) + "\"\r\n" +
                 "    Size in bytes: " + fileSize + "\r\n" +
