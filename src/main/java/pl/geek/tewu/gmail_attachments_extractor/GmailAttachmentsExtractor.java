@@ -34,8 +34,8 @@ import static pl.geek.tewu.gmail_attachments_extractor.Options.DEFAULT_MIME_TYPE
 
 
 public class GmailAttachmentsExtractor {
-    public static final String WITH_ATTACHMENTS_SUFFIX = " [with attachments]";
-    public static final String NO_ATTACHMENTS_SUFFIX = " [no attachments]";
+    public static final String PRE_LABEL_SUFFIX = " [pre]";
+    public static final String POST_LABEL_SUFFIX = " [post]";
     public static final String DELETED_FILE_PREFIX = "Deleted ";
 
     private Gmail gmail;
@@ -86,18 +86,18 @@ public class GmailAttachmentsExtractor {
         buildLabelDictionaries();
 
         // Create output labels
-        Label withAttLabel = null;
-        Label noAttLabel = null;
+        Label preLabel = null;
+        Label postLabel = null;
         if (options.modifyGmail) {
-            String withAttLabelName = options.outputLabelsPrefix + WITH_ATTACHMENTS_SUFFIX;
-            String noAttLabelName = options.outputLabelsPrefix + NO_ATTACHMENTS_SUFFIX;
-            if (labelsByName.containsKey(withAttLabelName) || labelsByName.containsKey(noAttLabelName)) {
-                System.err.println("Labels '" + withAttLabelName + "' and/or '" + noAttLabelName + "' already exist. Running this program when this labels already exist might lead to confusing results. Please provide different output labels prefix and try again. Note that removing those labels is probably not a good solution, as it may prevent you from distinguishing between emails with attachments and its copies without attachments - Terminating.");
+            String preLabelName = options.outputLabelsPrefix + PRE_LABEL_SUFFIX;
+            String postLabelName = options.outputLabelsPrefix + POST_LABEL_SUFFIX;
+            if (labelsByName.containsKey(preLabelName) || labelsByName.containsKey(postLabelName)) {
+                System.err.println("Labels '" + preLabelName + "' and/or '" + postLabelName + "' already exist. Running this program when this labels already exist might lead to confusing results. Please provide different output labels prefix and try again. Note that removing those labels is probably not a good solution, as it may prevent you from distinguishing between emails with attachments and its copies without attachments - Terminating.");
                 return false;
             }
-            System.out.printf("Creating output labels '%s' and '%s'\n", withAttLabelName, noAttLabelName);
-            withAttLabel = createLabel(withAttLabelName);
-            noAttLabel = createLabel(noAttLabelName);
+            System.out.printf("Creating output labels '%s' and '%s'\n", preLabelName, postLabelName);
+            preLabel = createLabel(preLabelName);
+            postLabel = createLabel(postLabelName);
         }
 
         System.out.println("Query '" + options.queryString + "' matched " + msgs.size() + " email messages");
@@ -181,20 +181,20 @@ public class GmailAttachmentsExtractor {
             setParts(mimeMsg, parts);
 
             if (options.modifyGmail) {
-                assert withAttLabel != null && noAttLabel != null;
+                assert preLabel != null && postLabel != null;
                 // Build message based on mimeMsg and rawMsg and insert it to Gmail
                 System.out.println("    Inserting copy of email without extracted attachments to Gmail");
                 List<String> labelIds = rawMsg.getLabelIds().stream()
                         .filter(id -> {
                             String name = labelsById.get(id).getName();
-                            return !name.endsWith(WITH_ATTACHMENTS_SUFFIX) && !name.endsWith(NO_ATTACHMENTS_SUFFIX);
+                            return !name.endsWith(PRE_LABEL_SUFFIX) && !name.endsWith(POST_LABEL_SUFFIX);
                         })
                         .collect(Collectors.toList());
-                labelIds.add(noAttLabel.getId());
+                labelIds.add(postLabel.getId());
                 insertMessage(mimeMsg, labelIds, rawMsg.getThreadId());
 
                 // Add label to the original message
-                addLabelToMessage(rawMsg, withAttLabel);
+                addLabelToMessage(rawMsg, preLabel);
             }
 
             msgExtractedCount++;
