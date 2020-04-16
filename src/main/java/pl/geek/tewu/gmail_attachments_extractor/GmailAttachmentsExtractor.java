@@ -38,7 +38,6 @@ public class GmailAttachmentsExtractor {
     public static final String POST_LABEL_SUFFIX = " [post]";
     public static final String DELETED_FILE_PREFIX = "Deleted ";
 
-    private Gmail gmail;
     private Gmail.Users.Labels gmailLabels;
     private Gmail.Users.Messages gmailMessages;
     private String userId;
@@ -57,7 +56,6 @@ public class GmailAttachmentsExtractor {
 
 
     public GmailAttachmentsExtractor(Gmail gmail, String userId, Options options) {
-        this.gmail = gmail;
         this.userId = userId;
         this.gmailLabels = gmail.users().labels();
         this.gmailMessages = gmail.users().messages();
@@ -356,12 +354,12 @@ public class GmailAttachmentsExtractor {
 
         StringBuilder sb = new StringBuilder("    Attachment filter:\n");
         int initLen = sb.length();
-        if (!Objects.equals(options.filter.filenameRegex.pattern(), DEFAULT_FILENAME_REGEX_STR)) sb.append("        Filename regex: " + options.filter.filenameRegex.pattern() + "\n");
-        if (!Objects.equals(options.filter.mimeTypeRegex.pattern(), DEFAULT_MIME_TYPE_REGEX_STR)) sb.append("        MIME type regex: " + options.filter.mimeTypeRegex.pattern() + "\n");
+        if (!Objects.equals(options.filter.filenameRegex.pattern(), DEFAULT_FILENAME_REGEX_STR)) sb.append("        Filename regex: ").append(options.filter.filenameRegex.pattern()).append("\n");
+        if (!Objects.equals(options.filter.mimeTypeRegex.pattern(), DEFAULT_MIME_TYPE_REGEX_STR)) sb.append("        MIME type regex: ").append(options.filter.mimeTypeRegex.pattern()).append("\n");
         List<String> sizeStrs = new LinkedList<>();
         if (options.filter.minSize > 0) sizeStrs.add("min " + String.format("%,d", options.filter.minSize) + " bytes");
         if (options.filter.maxSize > 0) sizeStrs.add("max " + String.format("%,d", options.filter.maxSize) + " bytes");
-        if (!sizeStrs.isEmpty()) sb.append("        File size: " + String.join(", ", sizeStrs));
+        if (!sizeStrs.isEmpty()) sb.append("        File size: ").append(String.join(", ", sizeStrs));
         if (sb.length() > initLen)
             System.out.println(sb.toString());
     }
