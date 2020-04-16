@@ -19,13 +19,14 @@ public class AccessibleMimeMessage extends MimeMessage {
     /**
      * A global unique number, to ensure uniqueness of generated strings.
      **/
-    private static AtomicInteger id = new AtomicInteger();
-    private static Random random = new Random();
+    private static final AtomicInteger ID = new AtomicInteger();
+    private static final Random RANDOM = new Random();
     private static final char[] MESSAGE_ID_ALPHABET = new char[]{
             '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
             'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
             'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '_', '+'
     };
+    private static final int MAX_MESSAGE_ID_LOCAL_PART_LENGTH = 100;
 
 
     private String nextMessageID = null;
@@ -78,14 +79,21 @@ public class AccessibleMimeMessage extends MimeMessage {
                 prevMessageId.lastIndexOf('@') == -1 || prevMessageId.charAt(0) != '<' || prevMessageId.charAt(prevMessageId.length() - 1) != '>')
             throw new IllegalStateException("Updating message with incorrect or absent Message-ID header");
 
-        // prevMessageId is  <(prev-left)@(prev-right)>
-        // New Message-ID is <(prev-left).(hashcode).(currentTime).(id)@(prev-right)>
+        // prevMessageId is  <(prev-local)@(prev-domain)>
+        // New Message-ID is <(prev-local).(hashcode).(currentTime).(id)@(prev-domain)>
         int at = prevMessageId.lastIndexOf('@');
-        return prevMessageId.substring(0, at) + "." +
-                convertDecToBase64(random.nextInt() & Integer.MAX_VALUE) + "." +
+        String prevLocal = prevMessageId.substring(1, at);
+        String newLocal = prevLocal + "." +
+                convertDecToBase64(RANDOM.nextInt() & Integer.MAX_VALUE) + "." +
                 convertDecToBase64(System.currentTimeMillis()) + "." +
-                convertDecToBase64(id.getAndIncrement()) +
-                prevMessageId.substring(at);
+                convertDecToBase64(ID.getAndIncrement());
+
+        if (newLocal.length() > MAX_MESSAGE_ID_LOCAL_PART_LENGTH) {
+            char randomChar = MESSAGE_ID_ALPHABET[RANDOM.nextInt(MESSAGE_ID_ALPHABET.length)];  // To avoid a dot (.) as first char in new local part
+            newLocal = randomChar + newLocal.substring(newLocal.length() - (MAX_MESSAGE_ID_LOCAL_PART_LENGTH - 1));
+        }
+
+        return "<" + newLocal + prevMessageId.substring(at);
     }
 
 
