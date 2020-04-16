@@ -22,6 +22,17 @@ public class Utils {
     }
 
 
+    public static boolean isAllPrintableASCII(String str) {
+        for (int i = 0; i < str.length(); i++)
+            if (!isPrintableASCII((int) str.charAt(i)))
+                return false;
+        return true;
+    }
+
+    public static boolean isPrintableASCII(int c) {
+        return c < 127 && (c >= 32 || c == '\r' || c == '\n' || c == '\t');
+    }
+
     public static String addJavaEscapeSequences(String input) {
         final StringWriter writer = new StringWriter(input.length() * 2);
         for (int i = 0; i < input.length(); i++) {

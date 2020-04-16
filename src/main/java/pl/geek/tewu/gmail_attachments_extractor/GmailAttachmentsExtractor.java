@@ -165,7 +165,7 @@ public class GmailAttachmentsExtractor {
                     if (options.modifyGmail) {
                         String descriptor = buildDescriptorString(part, messageId, mimeMsg.getSubject(), receiveDate, fileSize);  // buildDescriptorString must be called BEFORE modifying the part
                         part.setFileName(DELETED_FILE_PREFIX + fileName + ".yml");
-                        part.setText(descriptor);
+                        part.setContent(descriptor, "text/plain; charset=\"" + (Utils.isAllPrintableASCII(descriptor) ? "US-ASCII" : "UTF-8") + "\"");
                     }
                     extractedAttCount++;
                     totalExtractedAttSize += fileSize;
