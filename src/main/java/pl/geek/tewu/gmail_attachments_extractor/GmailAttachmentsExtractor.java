@@ -108,7 +108,7 @@ public class GmailAttachmentsExtractor {
 
             Optional<String> maybeSubject = msg.getPayload().getHeaders().stream().filter(h -> Objects.equals(h.getName(), "Subject")).map(h -> h.getValue()).findFirst();
             int percentProgress = 100 * msgProcessedCount / msgs.size();
-            System.out.println(msgProcessedCount + "/" + msgs.size() + " (" + percentProgress + "%) | Processing email with " + (maybeSubject.isPresent() ? "subject '" + maybeSubject.get() + "'" : "id: " + msg.getId()));
+            System.out.println(msgProcessedCount + "/" + msgs.size() + " (" + percentProgress + "%) | Processing email " + (maybeSubject.isPresent() ? "'" + maybeSubject.get() + "'" : msg.getId()));
 
             int attachmentToExtractCount = 0;
             List<String> mimeTypes = new LinkedList<>();
