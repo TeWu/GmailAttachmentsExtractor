@@ -123,10 +123,12 @@ public class Options {
             System.exit(1);
         }
 
-        Matcher invalidQueryStringMatcher = INVALID_CASE_OPERATORS_REGEX.matcher(queryString);
-        if (invalidQueryStringMatcher.matches()) {
-            System.err.println("Operators in QUERY_STRING, like '" + invalidQueryStringMatcher.group(1) + "', should be upper case. See more info about Gmail search operators: " + GMAIL_SEARCH_OPERATORS_HELP_URL);
-            System.exit(1);
+        if (queryString != null) {
+            Matcher invalidQueryStringMatcher = INVALID_CASE_OPERATORS_REGEX.matcher(queryString);
+            if (invalidQueryStringMatcher.matches()) {
+                System.err.println("Operators in QUERY_STRING, like '" + invalidQueryStringMatcher.group(1) + "', should be upper case. See more info about Gmail search operators: " + GMAIL_SEARCH_OPERATORS_HELP_URL);
+                System.exit(1);
+            }
         }
 
         outputDir = outputDir.toAbsolutePath();
