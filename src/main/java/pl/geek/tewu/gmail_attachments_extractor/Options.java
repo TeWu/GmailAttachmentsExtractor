@@ -36,7 +36,7 @@ public class Options {
     @Parameters(
             index = "1", arity = "0..1",
             defaultValue = "Gmail Extracted Attachments",
-            paramLabel = "OUTPUT_DIRECTORY", description = "Save attachments to this directory. Must be a patch to a non-existing directory."
+            paramLabel = "OUTPUT_DIRECTORY", description = "Save attachments to this directory. Must be a path to a non-existing directory."
     )
     public Path outputDir;
 

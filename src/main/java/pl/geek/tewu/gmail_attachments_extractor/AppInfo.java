@@ -4,5 +4,5 @@ public class AppInfo {
     public static final String NAME = "Gmail Attachments Extractor";
     public static final String SHORT_DESCRIPTION = "Downloads attachments from Gmail emails, then creates copy of emails but without extracted attachments.";
     public static final String VERSION = "0.0.2";
-    public static final String COMMAND = "java -jar GmailAttachmentExtractor.jar";
+    public static final String COMMAND = "java -jar GmailAttachmentsExtractor.jar";
 }
