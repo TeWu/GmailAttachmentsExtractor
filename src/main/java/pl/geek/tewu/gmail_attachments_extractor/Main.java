@@ -14,7 +14,7 @@ import java.util.concurrent.Callable;
 @Command(
         name = AppInfo.COMMAND,
         version = AppInfo.VERSION,
-        header = AppInfo.NAME + " v" + AppInfo.VERSION + "%n" + AppInfo.SHORT_DESCRIPTION + "%n",
+        header = AppInfo.NAME + " v" + AppInfo.VERSION + "%n" + AppInfo.SHORT_DESCRIPTION + "%n" + AppInfo.HOMEPAGE + "%n",
         usageHelpWidth = 120
 )
 public class Main implements Callable<Integer> {
