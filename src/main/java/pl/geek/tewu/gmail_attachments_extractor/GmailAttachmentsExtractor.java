@@ -273,8 +273,7 @@ public class GmailAttachmentsExtractor {
             for (int i = 0; i < multipart.getCount(); i++)
                 result[i] = multipart.getBodyPart(i);
             return result;
-        }
-        return new BodyPart[0];
+        } else throw new IllegalStateException("mimeMessage should have Multipart content");
     }
 
     private void setParts(MimeMessage mimeMessage, BodyPart... parts) throws IOException, MessagingException {
