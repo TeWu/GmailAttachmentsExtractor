@@ -179,7 +179,7 @@ public class GmailAttachmentsExtractor {
             setParts(mimeMsg, parts);
 
             if (options.modifyGmail) {
-                assert preLabel != null && postLabel != null;
+                if (preLabel == null || postLabel == null) throw new IllegalStateException("preLabel and postLabel can't be null");
                 // Build message based on mimeMsg and rawMsg and insert it to Gmail
                 System.out.println("    Inserting copy of email without extracted attachments to Gmail");
                 List<String> labelIds = rawMsg.getLabelIds().stream()
