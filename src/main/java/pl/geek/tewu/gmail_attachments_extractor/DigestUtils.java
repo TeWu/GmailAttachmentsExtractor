@@ -3,13 +3,12 @@ package pl.geek.tewu.gmail_attachments_extractor;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 
 public class DigestUtils {
-    public static final String UTF_8 = "UTF-8";
-    public static final Charset UTF_8_CHARSET = Charset.forName(UTF_8);
     public static final int STREAM_BUFFER_LENGTH = 1024;
     public static final char[] DIGITS_LOWER = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
 
@@ -132,7 +131,7 @@ public class DigestUtils {
     }
 
     public static byte[] digestBytes(final String data, final String algorithm) {
-        return digestBytes(getStringBytes(data, UTF_8_CHARSET), algorithm);
+        return digestBytes(getStringBytes(data, StandardCharsets.UTF_8), algorithm);
     }
 
     public static byte[] digestBytes(final byte[] data, final String algorithm) {
