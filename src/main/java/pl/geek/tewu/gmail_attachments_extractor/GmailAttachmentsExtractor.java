@@ -16,10 +16,12 @@ import javax.mail.Session;
 import javax.mail.internet.MailDateFormat;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
+import javax.mail.internet.MimeUtility;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.text.ParseException;
 import java.time.Instant;
@@ -143,9 +145,18 @@ public class GmailAttachmentsExtractor {
             for (BodyPart part : parts) {
                 // Extract information about body part
                 String fileName = part.getFileName();
+                if (fileName != null) fileName = MimeUtility.decodeText(fileName);
                 if (fileName == null || fileName.isEmpty()) // If part doesn't have a filename, then it's not an attachment - skip it (don't extract it)
                     continue;
-                Path filePath = attachmentsDir.resolve(fileName);
+                String filterFileName = fileName;  // Use current version of file name for filtering, because current version is the same as returned by MessagePart.getFilename call before
+                fileName = Utils.removeFileSeparatorChars(fileName);
+                Path filePath;
+                try {  // Try using potentially invalid file name first - e.g. Windows don't allow question mark (and some other characters) in filename, but Linux do
+                    filePath = attachmentsDir.resolve(fileName);
+                } catch (InvalidPathException exc) {
+                    fileName = Utils.sanitizeFileName(fileName);
+                    filePath = attachmentsDir.resolve(fileName);
+                }
                 String contentType = part.getContentType();
                 String mimeType = contentType.indexOf(";") > 0 ?
                         contentType.substring(0, contentType.indexOf(";")) :
@@ -156,12 +167,12 @@ public class GmailAttachmentsExtractor {
                 long fileSize = Files.size(filePath);
 
                 // Check if part should be extracted
-                if (isBodyPartSatisfiesFilter(fileName, mimeType, fileSize)) {
+                if (isBodyPartSatisfiesFilter(filterFileName, mimeType, fileSize)) {
                     // If part should be extracted, override its content with descriptor string (effectively deleting it from email message)
                     if (!attachmentSizes.remove(fileSize)) throw new RuntimeException("Incorrect exported file size");
                     System.out.println("    Attachment saved: " + fileName);
                     if (options.modifyGmail) {
-                        String descriptor = buildDescriptorString(part, messageId, mimeMsg.getSubject(), receiveDate, fileSize);  // buildDescriptorString must be called BEFORE modifying the part
+                        String descriptor = buildDescriptorString(part, messageId, mimeMsg.getSubject(), receiveDate, fileName, fileSize);  // buildDescriptorString must be called BEFORE modifying the part
                         part.setFileName(DELETED_FILE_PREFIX + fileName + ".yml");
                         part.setContent(descriptor, "text/plain; charset=\"" + (Utils.isAllPrintableASCII(descriptor) ? "US-ASCII" : "UTF-8") + "\"");
                     }
@@ -226,7 +237,7 @@ public class GmailAttachmentsExtractor {
     private Path createDirForAttachments(Instant receiveDate, String messageSubject) {
         final String receiveDateStr = DateTimeFormatter.ofPattern("yyyy.MM.dd HH_mm_ss").withZone(ZoneId.systemDefault())
                 .format(receiveDate);
-        final String dirName = receiveDateStr + " " + Utils.sanitizeDirname(messageSubject);
+        final String dirName = receiveDateStr + " " + Utils.sanitizeDirName(messageSubject);
         Path attDir = options.outputDir.resolve(dirName);
         int i = 2;
 
@@ -242,7 +253,7 @@ public class GmailAttachmentsExtractor {
         return attDir;
     }
 
-    private String buildDescriptorString(BodyPart part, String id, String subject, Instant receiveDate, long fileSize) throws IOException, MessagingException {
+    private String buildDescriptorString(BodyPart part, String id, String subject, Instant receiveDate, String fileName, long fileSize) throws IOException, MessagingException {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm:ss O").withZone(ZoneId.systemDefault());
         return "#\r\n" +
                 "# The attachment has been deleted from this email message.\r\n" +
@@ -253,7 +264,7 @@ public class GmailAttachmentsExtractor {
                 "    Subject: \"" + Utils.addJavaEscapeSequences(subject) + "\"\r\n" +
                 "    Date received: " + formatter.format(receiveDate) + "\r\n" +
                 "Attachment file:\r\n" +
-                "    Name: \"" + Utils.addJavaEscapeSequences(part.getFileName()) + "\"\r\n" +
+                "    Name: \"" + Utils.addJavaEscapeSequences(fileName) + "\"\r\n" +
                 "    Size in bytes: " + fileSize + "\r\n" +
                 "    SHA1: " + DigestUtils.sha1Hex(part.getInputStream()) + "\r\n" +
                 "    MD5:  " + DigestUtils.md5Hex(part.getInputStream()) + "\r\n";

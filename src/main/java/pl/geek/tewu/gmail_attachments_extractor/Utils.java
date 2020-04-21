@@ -8,6 +8,9 @@ import java.util.Map;
 
 
 public class Utils {
+    public static final int DIR_NAME_MAX_LEN = 100;
+    public static final int FILE_NAME_NO_EXT_MAX_LEN = 100;
+    public static final int FILE_EXT_MAX_LEN = 15;
     public static final Map<Character, String> JAVA_ESCAPE_SEQ_MAPPING = new HashMap<>();
 
     static {
@@ -46,12 +49,35 @@ public class Utils {
         return writer.toString();
     }
 
-    public static String sanitizeDirname(String dirname) {
-        if (dirname.length() > 50)
-            dirname = dirname.substring(0, 50);
-        dirname = dirname.replaceAll("[^a-zA-ZĄąĆćĘęŁłŃńŚśÓóŻżŹź0-9 _]+", "_");
-        stripEnd(dirname, ".", true);
-        return dirname;
+    public static String removeFileSeparatorChars(String str) {
+        StringBuilder sb = new StringBuilder(str.length());
+        char c;
+        for (int i = 0; i < str.length(); i++) {
+            c = str.charAt(i);
+            if (c != '/' && c != '\\') sb.append(c);
+            else sb.append('_');
+        }
+        return sb.toString();
+    }
+
+    public static String sanitizeFileName(String name) {
+        final int dot = name.lastIndexOf('.');
+        if (dot == -1) return sanitizeFSName(name, FILE_NAME_NO_EXT_MAX_LEN);
+        return sanitizeFSName(name.substring(0, dot), FILE_NAME_NO_EXT_MAX_LEN) +
+                "." +
+                sanitizeFSName(name.substring(dot + 1), FILE_EXT_MAX_LEN);
+    }
+
+    public static String sanitizeDirName(String name) {
+        return sanitizeFSName(name, DIR_NAME_MAX_LEN);
+    }
+
+    public static String sanitizeFSName(String name, int maxLen) {
+        if (name.length() > maxLen)
+            name = name.substring(0, maxLen);
+        name = name.replaceAll("[^a-zA-ZĄąĆćĘęŁłŃńŚśÓóŻżŹź0-9 _]+", "_");
+        stripEnd(name, ".", true);
+        return name;
     }
 
     public static String stripEnd(final String str, final String stripChars, final boolean stripWhitespace) {
