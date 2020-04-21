@@ -148,7 +148,7 @@ public class GmailAttachmentsExtractor {
                 if (fileName != null) fileName = MimeUtility.decodeText(fileName);
                 if (fileName == null || fileName.isEmpty()) // If part doesn't have a filename, then it's not an attachment - skip it (don't extract it)
                     continue;
-                String filterFileName = fileName;  // Use current version of file name for filtering, because current version is the same as returned by MessagePart.getFilename call before
+                String unsanitizedFileName = fileName;
                 fileName = Utils.removeFileSeparatorChars(fileName);
                 Path filePath;
                 try {  // Try using potentially invalid file name first - e.g. Windows don't allow question mark (and some other characters) in filename, but Linux do
@@ -167,7 +167,7 @@ public class GmailAttachmentsExtractor {
                 long fileSize = Files.size(filePath);
 
                 // Check if part should be extracted
-                if (isBodyPartSatisfiesFilter(filterFileName, mimeType, fileSize)) {
+                if (isBodyPartSatisfiesFilter(unsanitizedFileName, mimeType, fileSize)) {  // Use unsanitized version of file name for filtering, because unsanitized version is the same as returned by MessagePart.getFilename call before
                     // If part should be extracted, override its content with descriptor string (effectively deleting it from email message)
                     if (!attachmentSizes.remove(fileSize)) throw new RuntimeException("Incorrect exported file size");
                     System.out.println("    Attachment saved: " + fileName);
@@ -182,7 +182,7 @@ public class GmailAttachmentsExtractor {
                 } else {
                     // If part should not be extracted, delete it from local filesystem
                     Files.delete(filePath);
-                    System.out.println("    Attachment NOT saved: " + fileName);
+                    System.out.println("    Attachment NOT saved: " + unsanitizedFileName);  // File not extracted from the email message - so display file name as it appears in the message (not its sanitized version)
                     filteredAttMimeTypes.add(mimeType);
                 }
             }
