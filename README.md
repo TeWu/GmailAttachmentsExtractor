@@ -18,6 +18,9 @@ Gmail Attachments Extractor does **not modify or delete** (or move to Trash) any
 If you are not happy with the result, and want to revert to the state from before running the extractor, it's  as simple as deleting all the emails with `Cleanup [post]` label, and then deleting `Cleanup [pre]` and `Cleanup [post]` labels.
 If you are happy with the result, then you can free up some space in your inbox by deleting the original emails (with attachments) and only leave their copies (without attachments). To do this, delete emails with `Cleanup [pre]` label.
 
+**WARNING:** When deleting all emails with a particular label, make sure you're doing that with **"Conversation view" turned off!** When "Conversation view" is turned on, then clicking on a label will show all CONVERSATIONS which contain emails with that particular label. Those conversations may contain emails without the label you've clicked on, therefore deleting those conversations may lead to data loss.
+To [turn off "Conversation view"][gmail-conversation-setting], click on a gear wheel ("Settings") button in a top-right corner of the gmail page, and in the "General" tab click on "Conversation view off", and then "Save Changes" button.
+
 
 How to use it
 =======
@@ -126,6 +129,7 @@ Attachment Filter Options:
 
 
 [gmail-home]: https://www.google.com/gmail/
+[gmail-conversation-setting]: https://support.google.com/mail/answer/5900
 [releases]: https://github.com/TeWu/GmailAttachmentsExtractor/releases
 [gmail-api-quickstart]: https://developers.google.com/gmail/api/quickstart/java#step_1_turn_on_the
 [gmail-search]: https://support.google.com/mail/answer/7190
