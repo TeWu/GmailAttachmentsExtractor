@@ -226,7 +226,7 @@ public class GmailAttachmentsExtractor {
     private boolean isBodyPartSatisfiesFilter(String filename, String mimeType, Long size) {
         if (filename == null || filename.isEmpty() ||
                 mimeType == null || mimeType.isEmpty() || mimeType.contains("multipart") ||
-                size == null || size == 0)
+                size == null)
             return false;
         return options.filter.filenameRegex.matcher(filename).matches() &&
                 options.filter.mimeTypeRegex.matcher(mimeType).matches() &&
