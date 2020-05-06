@@ -18,7 +18,7 @@ Gmail Attachments Extractor does **not modify or delete** (or move to Trash) any
 If you are not happy with the result, and want to revert to the state from before running the extractor, it's  as simple as deleting all the emails with `Cleanup [post]` label, and then deleting `Cleanup [pre]` and `Cleanup [post]` labels.
 If you are happy with the result, then you can free up some space in your inbox by deleting the original emails (with attachments) and only leave their copies (without attachments). To do this, delete emails with `Cleanup [pre]` label.
 
-**WARNING:** When deleting all emails with a particular label, make sure you're doing that with **"Conversation view" turned off!** When "Conversation view" is turned on, then clicking on a label will show all CONVERSATIONS which contain emails with that particular label. Those conversations may contain emails without the label you've clicked on, therefore deleting those conversations may lead to data loss.
+⚠️ **WARNING:** When deleting all emails with a particular label, make sure you're doing that with **"Conversation view" turned&nbsp;off!** When "Conversation view" is turned on, then clicking on a label will show all CONVERSATIONS which contain emails with that particular label. Those conversations may contain emails without the label you've clicked on, therefore deleting those conversations may lead to data loss.
 To [turn off "Conversation view"][gmail-conversation-setting], click on a gear wheel ("Settings") button in a top-right corner of the gmail page, and in the "General" tab click on "Conversation view off", and then "Save Changes" button.
 
 
@@ -27,7 +27,7 @@ How to use it
 
 Step 0
 -------
-Download the newest release of **Gmail Attachments Extractor** (`GmailAttachmentsExtractor_vX.X.X.zip` file) from the [releases][releases] page. Unpack the archive, so that you have `GmailAttachmentsExtractor.jar` file.
+Download the newest release of **Gmail Attachments Extractor**: [`GmailAttachmentsExtractor_v1.0.0.zip`][v1.0.0.zip] file (sha1: `7eb85c39f730643f60177a99241531ac91d7c70f`). Unpack the archive, so that you have `GmailAttachmentsExtractor.jar` file (sha1: `09a6476a46da52f5d5162f82ab0ac64c36fb1430`).
 
 Step 1
 -------
@@ -130,7 +130,7 @@ Attachment Filter Options:
 
 [gmail-home]: https://www.google.com/gmail/
 [gmail-conversation-setting]: https://support.google.com/mail/answer/5900
-[releases]: https://github.com/TeWu/GmailAttachmentsExtractor/releases
+[v1.0.0.zip]: https://github.com/TeWu/GmailAttachmentsExtractor/releases/download/1.0.0/GmailAttachmentsExtractor_v1.0.0.zip
 [gmail-api-quickstart]: https://developers.google.com/gmail/api/quickstart/java#step_1_turn_on_the
 [gmail-search]: https://support.google.com/mail/answer/7190
 [api-console-gmail-creds]: https://console.developers.google.com/apis/api/gmail.googleapis.com/credentials
