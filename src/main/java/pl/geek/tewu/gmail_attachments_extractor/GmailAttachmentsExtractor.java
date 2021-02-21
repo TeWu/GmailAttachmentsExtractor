@@ -237,7 +237,7 @@ public class GmailAttachmentsExtractor {
     private Path createDirForAttachments(Instant receiveDate, String messageSubject) {
         final String receiveDateStr = DateTimeFormatter.ofPattern("yyyy.MM.dd HH_mm_ss").withZone(ZoneId.systemDefault())
                 .format(receiveDate);
-        final String dirName = receiveDateStr + " " + Utils.sanitizeDirName(messageSubject);
+        final String dirName = (receiveDateStr + " " + Utils.sanitizeDirName(messageSubject)).trim();
         Path attDir = options.outputDir.resolve(dirName);
         int i = 2;
 
