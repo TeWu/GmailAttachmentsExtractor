@@ -76,7 +76,7 @@ public class GmailAttachmentsExtractor {
         }
 
         // Get email messages matching queryString
-        List<Message> msgs = gmailMessages.list(userId).setQ(options.queryString).execute().getMessages();
+        List<Message> msgs = gmailMessages.list(userId).setQ(options.queryString).setMaxResults(1000000000L).execute().getMessages();
         if (msgs == null || msgs.isEmpty()) {
             System.out.println("No messages matched query '" + options.queryString + "' - Terminating.");
             return false;
