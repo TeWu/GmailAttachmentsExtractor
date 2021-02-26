@@ -193,12 +193,16 @@ public class GmailAttachmentsExtractor {
                 if (preLabel == null || postLabel == null) throw new IllegalStateException("preLabel and postLabel can't be null");
                 // Build message based on mimeMsg and rawMsg and insert it to Gmail
                 System.out.println("    Inserting copy of email without extracted attachments to Gmail");
-                List<String> labelIds = rawMsg.getLabelIds().stream()
-                        .filter(id -> {
-                            String name = labelsById.get(id).getName();
-                            return !name.endsWith(PRE_LABEL_SUFFIX) && !name.endsWith(POST_LABEL_SUFFIX);
-                        })
-                        .collect(Collectors.toList());
+                List<String> labelIds = rawMsg.getLabelIds();
+                if (labelIds == null) labelIds = new LinkedList<>();
+                else {
+                    labelIds = labelIds.stream()
+                            .filter(id -> {
+                                String name = labelsById.get(id).getName();
+                                return !name.endsWith(PRE_LABEL_SUFFIX) && !name.endsWith(POST_LABEL_SUFFIX);
+                            })
+                            .collect(Collectors.toList());
+                }
                 labelIds.add(postLabel.getId());
                 insertMessage(mimeMsg, labelIds, rawMsg.getThreadId());
 
