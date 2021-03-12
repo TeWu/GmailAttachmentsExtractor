@@ -112,9 +112,10 @@ public class GmailAttachmentsExtractor {
                     List<Long> attachmentSizes = new LinkedList<>();
                     Message msg = gmailMessages.get(userId, msgIds.getId()).execute();
 
-                    Optional<String> maybeSubject = msg.getPayload().getHeaders().stream().filter(h -> Objects.equals(h.getName(), "Subject")).map(h -> h.getValue()).findFirst();
+                    Optional<String> maybeSubject = msg.getPayload().getHeaders().stream().filter(h -> Objects.equals(h.getName(), "Subject") && !h.getValue().trim().isEmpty()).map(h -> h.getValue()).findFirst();
+                    String oldMessageId = msg.getPayload().getHeaders().stream().filter(h -> Objects.equals(h.getName(), "Message-ID") && !h.getValue().trim().isEmpty()).map(h -> h.getValue()).findFirst().orElse("MISSING");
                     int percentProgress = (int) (100 * msgProcessedCount / msgsCount);
-                    System.out.println(msgProcessedCount + "/" + msgsCountEstimatedChar + msgsCount + " (" + percentProgress + "%) | Processing email " + (maybeSubject.isPresent() ? "'" + maybeSubject.get() + "'" : msg.getId()));
+                    System.out.println(msgProcessedCount + "/" + msgsCountEstimatedChar + msgsCount + " (" + percentProgress + "%) | Processing email " + (maybeSubject.isPresent() ? "'" + maybeSubject.get() + "'" : "with Message-ID " + oldMessageId));
 
                     int attachmentToExtractCount = 0;
                     List<String> mimeTypes = new LinkedList<>();
@@ -140,8 +141,9 @@ public class GmailAttachmentsExtractor {
                     Message rawMsg = getRawMessage(msgIds.getId());
                     AccessibleMimeMessage mimeMsg = rawMessageToMimeMessage(rawMsg);
                     String messageId = mimeMsg.generateNextMessageID();
+                    String messageSubject = mimeMsg.getSubject() != null ? mimeMsg.getSubject() : "";
                     Instant receiveDate = new MailDateFormat().parse(mimeMsg.getHeader("Date", null)).toInstant();
-                    Path attachmentsDir = createDirForAttachments(receiveDate, mimeMsg.getSubject());
+                    Path attachmentsDir = createDirForAttachments(receiveDate, messageSubject);
 
                     System.out.println("    Extracting " + attachmentToExtractCount + " attachment(s) to directory '" + attachmentsDir.getFileName() + "'");
 
@@ -176,7 +178,7 @@ public class GmailAttachmentsExtractor {
                             if (!attachmentSizes.remove(fileSize)) throw new RuntimeException("Incorrect exported file size");
                             System.out.println("    Attachment saved: " + fileName);
                             if (options.modifyGmail) {
-                                String descriptor = buildDescriptorString(part, messageId, mimeMsg.getSubject(), receiveDate, fileName, fileSize);  // buildDescriptorString must be called BEFORE modifying the part
+                                String descriptor = buildDescriptorString(part, messageId, messageSubject, receiveDate, fileName, fileSize);  // buildDescriptorString must be called BEFORE modifying the part
                                 part.setFileName(DELETED_FILE_PREFIX + fileName + ".yml");
                                 part.setContent(descriptor, "text/plain; charset=\"" + (Utils.isAllPrintableASCII(descriptor) ? "US-ASCII" : "UTF-8") + "\"");
                             }
