@@ -68,6 +68,12 @@ public class Options {
     public boolean modifyGmail;
 
     @Option(
+            names = {"--unsafe"},
+            description = "If processing email message is unsuccessful (results in an error), ignore that error and proceed to the next email. All ignored errors are listed at the end of the program execution. Running the program with --unsafe switch is STRONGLY DISCOURAGED! Ignoring errors shouldn't cause any immediate problems, but it may confuse You about which actions program performed successfully, and which not, and in result You may get tricked to act in a way that can lead to data loss, email duplication and other unforeseen consequences. Please use --unsafe switch only for debugging purposes, and not to do actual work of extracting attachments."
+    )
+    public boolean unsafe;
+
+    @Option(
             names = {"--only-check-auth"},
             help = true,  // Disable requested option validation
             description = "Only check if authorization information are correct, by trying to access the Gmail account, and exit immediately."
