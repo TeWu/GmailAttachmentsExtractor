@@ -101,7 +101,7 @@ public class GmailAttachmentsExtractor {
             postLabel = createLabel(postLabelName);
         }
 
-        System.out.println("Query '" + options.queryString + "' matched " + msgsCountEstimatedChar + msgsCount + " email messages");
+        System.out.println("Query '" + options.queryString + "' matched " + msgsCountEstimatedChar + msgsCount + " email messages\n");
 
         do { // Process page (batch) of emails
 
@@ -408,6 +408,7 @@ public class GmailAttachmentsExtractor {
         if (sb.length() > initLen)
             System.out.println(sb.toString());
         if (options.unsafe) System.out.println("!! UNSAFE MODE ON !!");
+        System.out.println();
     }
 
     private void printSummary() {
