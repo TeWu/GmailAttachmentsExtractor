@@ -27,7 +27,7 @@ How to use it
 
 Step 0
 -------
-Download the newest release of **Gmail Attachments Extractor**: [`GmailAttachmentsExtractor_v1.0.1.zip`][v1.0.1.zip] file (sha1: `3a4fd73088146ba16973cd85d54ee976e1445281`). Unpack the archive, so that you have `GmailAttachmentsExtractor.jar` file (sha1: `a80d9f45818aa69b44c866694a62d7ebe18f71a6`).
+Download the newest release of **Gmail Attachments Extractor**: [`GmailAttachmentsExtractor_v1.0.2.zip`][v1.0.2.zip] file (sha1: `8f80260c81febfc9b4525753f46d6483c9db9333`). Unpack the archive, so that you have `GmailAttachmentsExtractor.jar` file (sha1: `3bf2937e26825b45ca21e4f51eb83549c5e16828`).
 
 Step 1
 -------
@@ -130,7 +130,7 @@ Attachment Filter Options:
 
 [gmail-home]: https://www.google.com/gmail/
 [gmail-conversation-setting]: https://support.google.com/mail/answer/5900
-[v1.0.1.zip]: https://github.com/TeWu/GmailAttachmentsExtractor/releases/download/1.0.1/GmailAttachmentsExtractor_v1.0.1.zip
+[v1.0.2.zip]: https://github.com/TeWu/GmailAttachmentsExtractor/releases/download/1.0.2/GmailAttachmentsExtractor_v1.0.2.zip
 [gmail-api-quickstart]: https://developers.google.com/gmail/api/quickstart/java#step_1_turn_on_the
 [gmail-search]: https://support.google.com/mail/answer/7190
 [api-console-gmail-creds]: https://console.developers.google.com/apis/api/gmail.googleapis.com/credentials
