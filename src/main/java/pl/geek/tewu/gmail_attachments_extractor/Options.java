@@ -74,6 +74,13 @@ public class Options {
     public boolean unsafe;
 
     @Option(
+            names = {"--no-validate"}, negatable = true,
+            defaultValue = "true",
+            description = "Performs validations, to make sure that attachment extraction has been performed correctly."
+    )
+    public boolean validate;
+
+    @Option(
             names = {"--inter-message-wait"},
             defaultValue = "0",
             description = "Waits that many milliseconds before processing each email massage. Slowing down the program might help to avoid exceeding gmail API quota."

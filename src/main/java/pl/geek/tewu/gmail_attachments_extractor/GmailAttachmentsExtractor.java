@@ -177,7 +177,8 @@ public class GmailAttachmentsExtractor {
                         // Check if part should be extracted
                         if (isBodyPartSatisfiesFilter(unsanitizedFileName, mimeType, fileSize)) {  // Use unsanitized version of file name for filtering, because unsanitized version is the same as returned by MessagePart.getFilename call before
                             // If part should be extracted, override its content with descriptor string (effectively deleting it from email message)
-                            if (!attachmentSizes.remove(fileSize)) throw new RuntimeException("Incorrect exported file size");
+                            boolean removed = attachmentSizes.remove(fileSize);
+                            if (options.validate && !removed) throw new RuntimeException("Incorrect exported file size");
                             System.out.println("    Attachment saved: " + fileName);
                             if (options.modifyGmail) {
                                 String descriptor = buildDescriptorString(part, messageId, messageSubject, receiveDate, fileName, fileSize);  // buildDescriptorString must be called BEFORE modifying the part
@@ -194,7 +195,7 @@ public class GmailAttachmentsExtractor {
                             filteredAttMimeTypes.add(mimeType);
                         }
                     }
-                    if (!attachmentSizes.isEmpty()) throw new RuntimeException("One of attachments hasn't been exported properly");
+                    if (options.validate && !attachmentSizes.isEmpty()) throw new RuntimeException("One of attachments hasn't been exported properly");
                     setParts(mimeMsg, parts);
 
                     if (options.modifyGmail) {
@@ -409,6 +410,7 @@ public class GmailAttachmentsExtractor {
         if (!sizeStrs.isEmpty()) sb.append("        File size: ").append(String.join(", ", sizeStrs));
         if (sb.length() > initLen)
             System.out.println(sb.toString());
+        if (!options.validate) System.out.println("VALIDATIONS OFF!");
         if (options.unsafe) System.out.println("!! UNSAFE MODE ON !!");
         System.out.println();
     }
