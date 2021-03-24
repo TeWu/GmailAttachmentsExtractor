@@ -74,6 +74,13 @@ public class Options {
     public boolean unsafe;
 
     @Option(
+            names = {"--inter-message-wait"},
+            defaultValue = "0",
+            description = "Waits that many milliseconds before processing each email massage. Slowing down the program might help to avoid exceeding gmail API quota."
+    )
+    public int interMessageWait;
+
+    @Option(
             names = {"--only-check-auth"},
             help = true,  // Disable requested option validation
             description = "Only check if authorization information are correct, by trying to access the Gmail account, and exit immediately."

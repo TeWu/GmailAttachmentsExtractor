@@ -17,6 +17,7 @@ import javax.mail.internet.MimeUtility;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.lang.Thread;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
@@ -62,7 +63,7 @@ public class GmailAttachmentsExtractor {
         this.globalUniqueNum = 0;
     }
 
-    public boolean extractAttachments() throws IOException, MessagingException, ParseException {
+    public boolean extractAttachments() throws IOException, MessagingException, ParseException, InterruptedException {
         List<RuntimeException> ignoredExceptions = new LinkedList<>();
         resetStats();
         printStartMessage();
@@ -107,6 +108,7 @@ public class GmailAttachmentsExtractor {
 
             // Process email messages
             for (Message msgIds : msgs) {
+                Thread.sleep(options.interMessageWait);
                 try { // "Fail late" check
                     msgProcessedCount++;
                     List<Long> attachmentSizes = new LinkedList<>();
