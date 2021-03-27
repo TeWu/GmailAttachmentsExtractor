@@ -76,7 +76,7 @@ public class Options {
     @Option(
             names = {"--no-validate"}, negatable = true,
             defaultValue = "true",
-            description = "Performs validations, to make sure that attachment extraction has been performed correctly."
+            description = "Performs validations, to make sure that attachment extraction has been performed correctly. If the validations result in false negatives (which from unknown reasons can sometimes happen), then disable validations, and validate manually that the attachments has been downloaded correctly. It is recommended to, when necessary, run the program with validations disabled only for a single, problematic email (targeting it by Message-ID)."
     )
     public boolean validate;
 
