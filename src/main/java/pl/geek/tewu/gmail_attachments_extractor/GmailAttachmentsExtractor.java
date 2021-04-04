@@ -19,7 +19,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.lang.Thread;
 import java.nio.file.Files;
-import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.text.ParseException;
 import java.time.Instant;
@@ -158,13 +157,8 @@ public class GmailAttachmentsExtractor {
                             continue;
                         String unsanitizedFileName = fileName;
                         fileName = Utils.removeFileSeparatorChars(fileName);
-                        Path filePath;
-                        try {  // Try using potentially invalid file name first - e.g. Windows don't allow question mark (and some other characters) in filename, but Linux do
-                            filePath = attachmentsDir.resolve(fileName);
-                        } catch (InvalidPathException exc) {
-                            fileName = Utils.sanitizeFileName(fileName);
-                            filePath = attachmentsDir.resolve(fileName);
-                        }
+                        fileName = Utils.resolvingSanitizeFileName(attachmentsDir, fileName);
+                        Path filePath = attachmentsDir.resolve(fileName);
                         String contentType = part.getContentType();
                         String mimeType = contentType.indexOf(";") > 0 ?
                                 contentType.substring(0, contentType.indexOf(";")) :
@@ -267,7 +261,7 @@ public class GmailAttachmentsExtractor {
     private Path createDirForAttachments(Instant receiveDate, String messageSubject) {
         final String receiveDateStr = DateTimeFormatter.ofPattern("yyyy.MM.dd HH_mm_ss").withZone(ZoneId.systemDefault())
                 .format(receiveDate);
-        final String dirName = (receiveDateStr + " " + Utils.sanitizeDirName(messageSubject)).trim();
+        final String dirName = Utils.resolvingSanitizeDirName(options.outputDir, (receiveDateStr + " " + messageSubject).trim());  // Yes - I want to (eagerly) trim(), because it's a common case that messageSubject is an empty string, and if we would keep the space at the end of the string, it would take sanitization algorithm much more time to process the string
         Path attDir = options.outputDir.resolve(dirName);
         int i = 2;
 

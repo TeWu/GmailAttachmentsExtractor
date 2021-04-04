@@ -1,16 +1,21 @@
 package pl.geek.tewu.gmail_attachments_extractor;
 
 import java.io.*;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
 import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 
 public class Utils {
     public static final int DIR_NAME_MAX_LEN = 100;
     public static final int FILE_NAME_NO_EXT_MAX_LEN = 100;
     public static final int FILE_EXT_MAX_LEN = 15;
+    public static final Pattern NON_UNICODE_FS_NAME_PATTERN = Pattern.compile("[^A-Za-z0-9 _.]+");
+    public static final Pattern UNICODE_FS_NAME_PATTERN = Pattern.compile("[^\\p{Alpha}0-9 _.]+", Pattern.UNICODE_CHARACTER_CLASS);
     public static final Map<Character, String> JAVA_ESCAPE_SEQ_MAPPING = new HashMap<>();
 
     static {
@@ -60,23 +65,51 @@ public class Utils {
         return sb.toString();
     }
 
-    public static String sanitizeFileName(String name) {
+    public static String resolvingSanitizeFileName(Path base, String fileName) {
+        Path sanitizedFilePath = sanitizingResolve(base, fileName, true);
+        return sanitizedFilePath.getFileName().toString();
+    }
+
+    public static String resolvingSanitizeDirName(Path base, String dirName) {
+        Path sanitizedDirPath = sanitizingResolve(base, dirName, false);
+        return sanitizedDirPath.getFileName().toString();
+    }
+
+    private static Path sanitizingResolve(Path base, String fsObjectName, boolean isFile) {
+        try {
+            return base.resolve(fsObjectName);  // Try using potentially invalid name first - e.g. Windows don't allow question mark (and some other characters) in filename, but Linux do
+        } catch (InvalidPathException e1) {
+            // If the name is invalid, apply increasingly conservative sanitization, until it becomes valid
+            try {
+                return base.resolve(sanitize(fsObjectName, isFile, false));
+            } catch (InvalidPathException e2) {
+                return base.resolve(sanitize(fsObjectName, isFile, true));
+            }
+        }
+    }
+
+    private static String sanitize(String name, boolean isFile, boolean extraSafe) {
+        if (isFile) return sanitizeFileName(name, extraSafe);
+        else return sanitizeDirName(name, extraSafe);
+    }
+
+    private static String sanitizeFileName(String name, boolean extraSafe) {
         final int dot = name.lastIndexOf('.');
-        if (dot == -1) return sanitizeFSName(name, FILE_NAME_NO_EXT_MAX_LEN);
-        return sanitizeFSName(name.substring(0, dot), FILE_NAME_NO_EXT_MAX_LEN) +
+        if (dot == -1) return sanitizeFSName(name, FILE_NAME_NO_EXT_MAX_LEN, extraSafe);
+        return sanitizeFSName(name.substring(0, dot), FILE_NAME_NO_EXT_MAX_LEN, extraSafe) +
                 "." +
-                sanitizeFSName(name.substring(dot + 1), FILE_EXT_MAX_LEN);
+                sanitizeFSName(name.substring(dot + 1), FILE_EXT_MAX_LEN, extraSafe);
     }
 
-    public static String sanitizeDirName(String name) {
-        return sanitizeFSName(name, DIR_NAME_MAX_LEN);
+    private static String sanitizeDirName(String name, boolean extraSafe) {
+        return sanitizeFSName(name, DIR_NAME_MAX_LEN, extraSafe);
     }
 
-    public static String sanitizeFSName(String name, int maxLen) {
+    private static String sanitizeFSName(String name, int maxLen, boolean extraSafe) {
         if (name.length() > maxLen)
             name = name.substring(0, maxLen);
-        name = name.replaceAll("[^a-zA-ZĄąĆćĘęŁłŃńŚśÓóŻżŹź0-9 _]+", "_");
-        stripEnd(name, ".", true);
+        name = (extraSafe ? NON_UNICODE_FS_NAME_PATTERN : UNICODE_FS_NAME_PATTERN).matcher(name).replaceAll("_");
+        name = stripEnd(name, ".", true);
         return name;
     }
 
