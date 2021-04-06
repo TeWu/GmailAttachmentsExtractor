@@ -76,14 +76,20 @@ public class Utils {
     }
 
     private static Path sanitizingResolve(Path base, String fsObjectName, boolean isFile) {
+        fsObjectName = removeFileSeparatorChars(fsObjectName);
+        fsObjectName = stripEnd(fsObjectName, ".", true);
         try {
-            return base.resolve(fsObjectName);  // Try using potentially invalid name first - e.g. Windows don't allow question mark (and some other characters) in filename, but Linux do
-        } catch (InvalidPathException e1) {
+            return resolveAndCheck(base, fsObjectName);  // Try using potentially invalid name first - e.g. Windows don't allow question mark (and some other characters) in filename, but Linux do
+        } catch (IOException | InvalidPathException e1) {
             // If the name is invalid, apply increasingly conservative sanitization, until it becomes valid
             try {
-                return base.resolve(sanitize(fsObjectName, isFile, false));
-            } catch (InvalidPathException e2) {
-                return base.resolve(sanitize(fsObjectName, isFile, true));
+                return resolveAndCheck(base, sanitize(fsObjectName, isFile, false));
+            } catch (IOException | InvalidPathException e2) {
+                try {
+                    return resolveAndCheck(base, sanitize(fsObjectName, isFile, true));
+                } catch (IOException | InvalidPathException e3) {
+                    throw new RuntimeException(e3);
+                }
             }
         }
     }
@@ -128,6 +134,12 @@ public class Utils {
                 end--;
         }
         return str.substring(0, end);
+    }
+
+    private static Path resolveAndCheck(Path base, String fsObjectName) throws IOException {
+        Path path = base.resolve(fsObjectName);  // Resolve
+        path.toFile().getCanonicalFile();  // Check, and throw exception if invalid
+        return path;
     }
 
     public static String humanReadableByteCount(long bytes) {

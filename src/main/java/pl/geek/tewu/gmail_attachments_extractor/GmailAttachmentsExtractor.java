@@ -156,7 +156,6 @@ public class GmailAttachmentsExtractor {
                         if (fileName == null || fileName.isEmpty()) // If part doesn't have a filename, then it's not an attachment - skip it (don't extract it)
                             continue;
                         String unsanitizedFileName = fileName;
-                        fileName = Utils.removeFileSeparatorChars(fileName);
                         fileName = Utils.resolvingSanitizeFileName(attachmentsDir, fileName);
                         Path filePath = attachmentsDir.resolve(fileName);
                         String contentType = part.getContentType();
