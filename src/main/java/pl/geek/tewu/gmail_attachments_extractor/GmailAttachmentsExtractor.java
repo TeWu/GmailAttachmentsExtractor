@@ -151,7 +151,7 @@ public class GmailAttachmentsExtractor {
                     BodyPart[] parts = getParts(mimeMsg);
                     for (BodyPart part : parts) {
                         // Extract information about body part
-                        String fileName = part.getFileName();
+                        String fileName = Utils.getPartFileName(part, options.unsafe);
                         if (fileName != null) fileName = MimeUtility.decodeText(fileName);
                         if (fileName == null || fileName.isEmpty()) // If part doesn't have a filename, then it's not an attachment - skip it (don't extract it)
                             continue;
@@ -163,6 +163,10 @@ public class GmailAttachmentsExtractor {
                                 contentType.substring(0, contentType.indexOf(";")) :
                                 contentType;
                         // Save part to file
+                        int fileIdx = 2;
+                        while (filePath.toFile().exists())  // There can be multiple files with the same name, because the headers can be malformed (see Utils.getPartFileName)
+                            filePath = filePath.resolveSibling(fileName + " " + fileIdx++);
+                        fileName = filePath.getFileName().toString();
                         saveToFile(part, filePath);
                         // Calculate part/file size
                         long fileSize = Files.size(filePath);
@@ -214,7 +218,7 @@ public class GmailAttachmentsExtractor {
 
                     msgExtractedCount++;
                 } catch (RuntimeException exc) {
-                    if (!options.unsafe) throw exc;
+                    if (!options.failLate) throw exc;
                     else {
                         ignoredExceptions.add(exc);
                         System.out.println("    ! Error processing email (ERROR #" + ignoredExceptions.size() + ") - proceeding to the next email");
@@ -404,6 +408,7 @@ public class GmailAttachmentsExtractor {
         if (sb.length() > initLen)
             System.out.println(sb.toString());
         if (!options.validate) System.out.println("VALIDATIONS OFF!");
+        if (options.failLate) System.out.println("!! FAIL LATE MODE ON !!");
         if (options.unsafe) System.out.println("!! UNSAFE MODE ON !!");
         System.out.println();
     }

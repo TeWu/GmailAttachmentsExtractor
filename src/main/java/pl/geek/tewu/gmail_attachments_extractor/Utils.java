@@ -1,5 +1,8 @@
 package pl.geek.tewu.gmail_attachments_extractor;
 
+import javax.mail.BodyPart;
+import javax.mail.MessagingException;
+import javax.mail.internet.ParseException;
 import java.io.*;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
@@ -178,6 +181,50 @@ public class Utils {
             }
         }
         return new FileOutputStream(file, append);
+    }
+
+    /***** Mail *****/
+    public static final String CONTENT_TYPE_HNAME = "Content-Type";
+    public static final String CONTENT_DISPOSITION_HNAME = "Content-Disposition";
+    public static final String CONTENT_TYPE_FILENAME_FIELD_PREFIX = "name=";
+    public static final String CONTENT_DISPOSITION_FILENAME_FIELD_PREFIX = "filename=";
+
+
+    /**
+     * Get file name of a part.
+     * Optionally tries to handle malformed Content-Disposition header, that Gmail can present.
+     */
+    public static String getPartFileName(BodyPart part, boolean tryFix) throws MessagingException {
+        try {
+            return part.getFileName();
+        } catch (ParseException exc) {
+            if (!tryFix) throw exc;
+            fixNotQuotedPartFileName(part);
+            return part.getFileName();
+        }
+    }
+
+    /**
+     * Tries to fix malformed Content-Disposition and Content-Type headers, that contain file name
+     * with white characters, but not properly quoted.
+     * This is kind of malformation, that can Gmail is capable of.
+     */
+    public static void fixNotQuotedPartFileName(BodyPart part) {
+        try {
+            String cType = part.getHeader(CONTENT_TYPE_HNAME)[0];
+            String cDisp = part.getHeader(CONTENT_DISPOSITION_HNAME)[0];
+            int filenameIdx = cDisp.indexOf(CONTENT_DISPOSITION_FILENAME_FIELD_PREFIX) + CONTENT_DISPOSITION_FILENAME_FIELD_PREFIX.length();
+            String fileName = cDisp.substring(filenameIdx).trim();
+            String quotedFileName = "\"" + fileName + "\"";
+            String cTypePrefix = cType.substring(0, cType.indexOf(CONTENT_TYPE_FILENAME_FIELD_PREFIX) + CONTENT_TYPE_FILENAME_FIELD_PREFIX.length());
+            String cDispPrefix = cDisp.substring(0, filenameIdx);
+            part.setHeader(CONTENT_TYPE_HNAME, cTypePrefix + quotedFileName);
+            part.setHeader(CONTENT_DISPOSITION_HNAME, cDispPrefix + quotedFileName);
+            part.setFileName(fileName);
+            System.out.println("\nWARNING: Attachment headers had to be force changed to fix not quoted file names:\n    " + CONTENT_TYPE_HNAME + " header changed from\n" + cType + "\n    to\n" + part.getHeader(CONTENT_TYPE_HNAME)[0] + "\n    and " + CONTENT_DISPOSITION_HNAME + " header changed from\n" + cDisp + "\n    to\n" + part.getHeader(CONTENT_DISPOSITION_HNAME)[0] + "\n");
+        } catch (Exception exc) {
+            throw new RuntimeException("Unable to fix presumably not quoted file name of a BodyPart", exc);
+        }
     }
 
 }
