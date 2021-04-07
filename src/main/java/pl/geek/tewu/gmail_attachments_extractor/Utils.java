@@ -183,6 +183,15 @@ public class Utils {
         return new FileOutputStream(file, append);
     }
 
+    public static String findUniqueFileName(Path dirPath, String fileName, int maxNum) {
+        int i = 2;
+        Path path = dirPath.resolve(fileName);
+        while (path.toFile().exists() && i <= maxNum)
+            path = dirPath.resolve(fileName + " " + i++);
+        if (path.toFile().exists()) throw new RuntimeException("Can't find unique file patch for '" + dirPath.resolve(fileName) + "'");
+        return path.getFileName().toString();
+    }
+
     /***** Mail *****/
     public static final String CONTENT_TYPE_HNAME = "Content-Type";
     public static final String CONTENT_DISPOSITION_HNAME = "Content-Disposition";

@@ -157,16 +157,13 @@ public class GmailAttachmentsExtractor {
                             continue;
                         String unsanitizedFileName = fileName;
                         fileName = Utils.resolvingSanitizeFileName(attachmentsDir, fileName);
+                        fileName = Utils.findUniqueFileName(attachmentsDir, fileName, 100);  // There can be multiple files with the same name, because file name can change during sanitization, or because the headers can be malformed (see Utils.getPartFileName)
                         Path filePath = attachmentsDir.resolve(fileName);
                         String contentType = part.getContentType();
                         String mimeType = contentType.indexOf(";") > 0 ?
                                 contentType.substring(0, contentType.indexOf(";")) :
                                 contentType;
                         // Save part to file
-                        int fileIdx = 2;
-                        while (filePath.toFile().exists())  // There can be multiple files with the same name, because the headers can be malformed (see Utils.getPartFileName)
-                            filePath = filePath.resolveSibling(fileName + " " + fileIdx++);
-                        fileName = filePath.getFileName().toString();
                         saveToFile(part, filePath);
                         // Calculate part/file size
                         long fileSize = Files.size(filePath);
