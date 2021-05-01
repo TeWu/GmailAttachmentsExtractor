@@ -31,7 +31,8 @@ Download the newest release of **Gmail Attachments Extractor**: [`GmailAttachmen
 
 Step 1
 -------
-Now you need to generate `credentials.json` file, with Gmail API OAuth2 credentials. You can generate the file however you like, but if you are unsure how to do this, I've made [a visual guide][visguide_gmail_oauth_cred_gen], that will guide you trough the process. Alternatively you can follow the official Google guides, first [guide to creating a project and enabling the API][google_create_project], and then [guide to creating credentials][google_create_credentials].
+Now you need to generate `credentials.json` file, with Gmail API OAuth2 credentials. You can generate the file however you like, but if you are unsure how to do this, I've made [a visual guide][visguide_gmail_oauth_cred_gen], that will guide you trough the process. Alternatively you can follow the official Google guides, first [guide to creating a GCP project and enabling the API][google_create_project], and then [guide to creating credentials][google_create_credentials].
+
 When you have your `credentials.json` file, put it in the same directory as `GmailAttachmentsExtractor.jar` file, open terminal, change to the directory with `GmailAttachmentsExtractor.jar` file, and run:
 
 ```
