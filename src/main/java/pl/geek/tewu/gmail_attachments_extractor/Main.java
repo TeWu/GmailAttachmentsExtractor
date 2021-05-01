@@ -1,5 +1,6 @@
 package pl.geek.tewu.gmail_attachments_extractor;
 
+import com.google.api.client.auth.oauth2.TokenResponseException;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.GmailScopes;
 import picocli.CommandLine;
@@ -37,8 +38,12 @@ public class Main implements Callable<Integer> {
         Gmail gmail = GmailInit.getGmail(AppInfo.NAME, options.credentialsFilePath, SCOPES, options.tokensDirectoryPath);
         // Check authorization and exit if requested
         if (options.onlyCheckAuth) {
-            gmail.users().labels().list("me");
-            System.out.println("Gmail authorization: OK");
+            try {
+                gmail.users().labels().list("me").execute();
+                System.out.println("Gmail authorization: OK");
+            } catch (TokenResponseException exc) {
+                System.out.println("Gmail authorization: ERROR " + exc.getMessage());
+            }
             System.exit(0);
         }
         // Extract attachments
