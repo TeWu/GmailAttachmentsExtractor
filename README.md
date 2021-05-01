@@ -31,7 +31,7 @@ Download the newest release of **Gmail Attachments Extractor**: [`GmailAttachmen
 
 Step 1
 -------
-Now you need to generate `credentials.json` file, with Gmail API OAuth2 credentials. You can generate the file however you like, but the easiest way is to go to the [Gmail API Quickstart page][gmail-api-quickstart], click the blue "Enable the Gmail API" button, and follow the wizard (select "Desktop app", then click the "DOWNLOAD CLIENT CONFIGURATION" button).
+Now you need to generate `credentials.json` file, with Gmail API OAuth2 credentials. You can generate the file however you like, but if you are unsure how to do this, I've made [a visual guide][visguide_gmail_oauth_cred_gen], that will guide you trough the process. Alternatively you can follow the official Google guides, first [guide to creating a project and enabling the API][google_create_project], and then [guide to creating credentials][google_create_credentials].
 When you have your `credentials.json` file, put it in the same directory as `GmailAttachmentsExtractor.jar` file, open terminal, change to the directory with `GmailAttachmentsExtractor.jar` file, and run:
 
 ```
@@ -65,7 +65,7 @@ After you are done using Gmail Attachments Extractor, you should take few action
 You should go to [this page][api-console-gmail-creds], and delete the OAuth2 credentials that you created to use with Gmail Attachments Extractor.
 If you don't access Gmail API from any other app, then, you should go to [this page][api-console-gmail], and click "DISABLE API" button at the top of the page.
 
-Finally if you've used the [Gmail API Quickstart page][gmail-api-quickstart] to create OAuth2 credentials, then you've also created "Quickstart" project, that you no longer need. To delete the "Quickstart" project, go to [this page][api-console-proj-settings], make sure that "Project name" is "Quickstart" (if not, select "Quickstart" project from the top-left menu) and click on "SHUT DOWN" button at the top of the page.
+Finally if, in step 1, you've created OAuth2 credentials by following the [visual guide][visguide_gmail_oauth_cred_gen], then you've also created a Google Cloud Platform project, that you no longer need. To delete this GCP project, go to [this page][api-console-proj-settings], from menu in the top-left corner select project that you've created in step 1, and click on "SHUT DOWN" button at the top of the page.
 
 
 Customize
@@ -131,7 +131,9 @@ Attachment Filter Options:
 [gmail-home]: https://www.google.com/gmail/
 [gmail-conversation-setting]: https://support.google.com/mail/answer/5900
 [v1.0.3.zip]: https://github.com/TeWu/GmailAttachmentsExtractor/releases/download/1.0.3/GmailAttachmentsExtractor_v1.0.3.zip
-[gmail-api-quickstart]: https://developers.google.com/gmail/api/quickstart/java#step_1_turn_on_the
+[visguide_gmail_oauth_cred_gen]: https://i.imgur.com/VqU2pr6.jpg
+[google_create_project]: https://developers.google.com/workspace/guides/create-project
+[google_create_credentials]: https://developers.google.com/workspace/guides/create-credentials
 [gmail-search]: https://support.google.com/mail/answer/7190
 [api-console-gmail-creds]: https://console.developers.google.com/apis/api/gmail.googleapis.com/credentials
 [api-console-gmail]: https://console.developers.google.com/apis/api/gmail.googleapis.com/overview
