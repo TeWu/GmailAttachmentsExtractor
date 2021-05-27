@@ -100,7 +100,7 @@ Options:
                               Default: Cleanup
   -C, --credentials-file CREDENTIALS_FILE
                             Path to file with Gmail API credentials (typically named credentials.json). How to generate
-                              this file: https://developers.google.com/gmail/api/quickstart/java#step_1_turn_on_the
+                              this file: https://github.com/TeWu/GmailAttachmentsExtractor#how-to-use-it
                               Default: credentials.json
       --tokens-dir TOKENS_DIR
                             Path to directory, where Gmail API authorization data get stored

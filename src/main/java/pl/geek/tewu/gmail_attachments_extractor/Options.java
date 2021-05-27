@@ -24,7 +24,7 @@ public class Options {
     public static final String DEFAULT_MIME_TYPE_REGEX_STR = "^.*";
     public static final Pattern SIZE_STR_REGEX = Pattern.compile("^([0-9.]+)([kMG]?)B?$");
     public static final String GMAIL_SEARCH_OPERATORS_HELP_URL = "https://support.google.com/mail/answer/7190";
-    public static final String GMAIL_API_CREDENTIALS_FILE_GENERATION_URL = "https://developers.google.com/gmail/api/quickstart/java#step_1_turn_on_the";
+    public static final String GMAIL_API_CREDENTIALS_FILE_GENERATION_URL = "https://github.com/TeWu/GmailAttachmentsExtractor#how-to-use-it";
 
 
     @Parameters(
